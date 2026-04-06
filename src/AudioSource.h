@@ -15,5 +15,6 @@ class AudioSource {
   virtual void noteOff(std::size_t voice_index) = 0;
   virtual void noteOffAll() = 0;
   virtual void setVolume(float volume) = 0;
+  virtual void setVoiceLevel(std::size_t voice_index, float level, Waveform waveform) = 0;
   virtual bool isAvailable() const = 0;
 };

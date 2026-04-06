@@ -14,6 +14,7 @@ class OscillatorSource : public AudioSource {
   void noteOff(std::size_t voice_index) override;
   void noteOffAll() override;
   void setVolume(float volume) override;
+  void setVoiceLevel(std::size_t voice_index, float level, Waveform waveform) override;
   bool isAvailable() const override;
   AudioSourceType type() const override;
 
@@ -21,7 +22,6 @@ class OscillatorSource : public AudioSource {
   static constexpr std::size_t kWaveTableSize = SynthConfig::audio.wavetable_size;
 
   void buildWaveTables();
-  void updateChannelVolume(std::size_t voice_index, Waveform waveform) const;
   int channelForVoice(std::size_t voice_index) const;
   const unsigned char* waveformTable(Waveform waveform) const;
   static float waveformValue(Waveform waveform, float phase);

@@ -10,7 +10,6 @@
 
 namespace {
 
-
 constexpr float kNormalizeTarget = 0.82f;
 constexpr std::size_t kFadeSamples = 128;
 
@@ -106,8 +105,7 @@ bool OnboardMicSource::noteOn(std::size_t voice_index, float note_value, float /
   const float ratio = noteToRatio(note_value);
   const std::uint32_t playback_rate = static_cast<std::uint32_t>(std::lround(
       static_cast<float>(SynthConfig::audio.mic_sample_rate) * ratio));
-  M5.Speaker.setChannelVolume(channelForVoice(voice_index),
-                              static_cast<std::uint8_t>(std::lround(volume_ * 255.0f)));
+  setVoiceLevel(voice_index, volume_, Waveform::Sine);
   return M5.Speaker.playRaw(sample_buffer_.data(), sample_buffer_.lengthSamples(), playback_rate, false,
                             UINT32_MAX, channelForVoice(voice_index), true);
 }
@@ -124,10 +122,12 @@ void OnboardMicSource::noteOffAll() {
 
 void OnboardMicSource::setVolume(float volume) {
   volume_ = std::clamp(volume, 0.0f, 1.0f);
-  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
-    M5.Speaker.setChannelVolume(channelForVoice(i),
-                                static_cast<std::uint8_t>(std::lround(volume_ * 255.0f)));
-  }
+}
+
+void OnboardMicSource::setVoiceLevel(std::size_t voice_index, float level, Waveform /*waveform*/) {
+  const float scaled = std::clamp(level, 0.0f, 1.0f);
+  M5.Speaker.setChannelVolume(channelForVoice(voice_index),
+                              static_cast<std::uint8_t>(std::lround(scaled * 255.0f)));
 }
 
 bool OnboardMicSource::isAvailable() const {
@@ -232,4 +232,3 @@ float OnboardMicSource::noteToRatio(float note_value) {
 int OnboardMicSource::channelForVoice(std::size_t voice_index) const {
   return SynthConfig::audio.audio_channel + static_cast<int>(voice_index);
 }
-

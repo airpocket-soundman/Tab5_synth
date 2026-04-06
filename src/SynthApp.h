@@ -15,7 +15,7 @@ class SynthApp {
   void handleTouch();
   void handleSelectionTouch(int x, int y);
   void handlePitchModeTouch(int x, int y);
-  void handleVolumeTouch(int x, int y);
+  void handleSliderTouch(int x, int y);
   void handlePerformanceTouches(const std::array<int, SynthConfig::ui.max_touch_points>& xs,
                                 const std::array<int, SynthConfig::ui.max_touch_points>& ys,
                                 std::size_t count);

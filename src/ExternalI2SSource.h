@@ -23,6 +23,7 @@ class ExternalI2SSource : public AudioSource {
   void noteOff(std::size_t voice_index) override;
   void noteOffAll() override;
   void setVolume(float volume) override;
+  void setVoiceLevel(std::size_t voice_index, float level, Waveform waveform) override;
   bool isAvailable() const override;
   AudioSourceType type() const override;
 

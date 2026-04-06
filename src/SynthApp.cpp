@@ -9,7 +9,7 @@ namespace {
 
 constexpr std::uint32_t kUiRefreshIntervalMs = 33;
 constexpr int kTouchMarkerThreshold = 12;
-constexpr float kVolumeChangeThreshold = 0.01f;
+constexpr float kParameterChangeThreshold = 0.01f;
 
 bool touchMovedEnough(int current_x, int current_y, int previous_x, int previous_y) {
   return std::abs(current_x - previous_x) >= kTouchMarkerThreshold ||
@@ -31,6 +31,7 @@ void SynthApp::begin() {
 }
 
 void SynthApp::update() {
+  audio_engine_.update();
   handleTouch();
 }
 
@@ -84,6 +85,7 @@ void SynthApp::handleTouch() {
     if (touch.wasPressed() && ui_.isParameterArea(x, y)) {
       ui_state_.selected_parameter = ui_.parameterAt(x, y, ui_state_.selected_parameter);
       ui_.refreshParameterSelection(ui_state_);
+      ui_.refreshParameterControl(ui_state_);
       last_ui_refresh_ms_ = millis();
       return;
     }
@@ -93,8 +95,8 @@ void SynthApp::handleTouch() {
       return;
     }
 
-    if (isTouchActive(touch) && ui_.isVolumeArea(x, y)) {
-      handleVolumeTouch(x, y);
+    if (isTouchActive(touch) && ui_.isSliderArea(x, y)) {
+      handleSliderTouch(x, y);
       return;
     }
 
@@ -149,15 +151,43 @@ void SynthApp::handlePitchModeTouch(int x, int y) {
   ui_.refreshPitchMode(ui_state_);
 }
 
-void SynthApp::handleVolumeTouch(int x, int /*y*/) {
-  const float next_volume = ui_.volumeFromTouch(x);
-  if (std::abs(next_volume - ui_state_.volume) < kVolumeChangeThreshold) {
-    return;
+void SynthApp::handleSliderTouch(int x, int /*y*/) {
+  const float next_value = ui_.sliderValueFromTouch(x);
+  switch (ui_state_.selected_parameter) {
+    case UiParameter::Volume:
+      if (std::abs(next_value - ui_state_.volume) < kParameterChangeThreshold) {
+        return;
+      }
+      audio_engine_.setVolume(next_value);
+      break;
+    case UiParameter::Attack:
+      if (std::abs(next_value - ui_state_.attack) < kParameterChangeThreshold) {
+        return;
+      }
+      audio_engine_.setAttackNormalized(next_value);
+      break;
+    case UiParameter::Decay:
+      if (std::abs(next_value - ui_state_.decay) < kParameterChangeThreshold) {
+        return;
+      }
+      audio_engine_.setDecayNormalized(next_value);
+      break;
+    case UiParameter::Sustain:
+      if (std::abs(next_value - ui_state_.sustain) < kParameterChangeThreshold) {
+        return;
+      }
+      audio_engine_.setSustainNormalized(next_value);
+      break;
+    case UiParameter::Release:
+      if (std::abs(next_value - ui_state_.release) < kParameterChangeThreshold) {
+        return;
+      }
+      audio_engine_.setReleaseNormalized(next_value);
+      break;
   }
 
-  audio_engine_.setVolume(next_volume);
   syncUiState();
-  ui_.refreshVolumeControl(ui_state_);
+  ui_.refreshParameterControl(ui_state_);
   last_ui_refresh_ms_ = millis();
 }
 
@@ -214,6 +244,10 @@ void SynthApp::syncUiState() {
   ui_state_.active_midi_note = audio_engine_.activeMidiNote();
   ui_state_.active_frequency = audio_engine_.activeFrequency();
   ui_state_.volume = audio_engine_.volume();
+  ui_state_.attack = audio_engine_.attackNormalized();
+  ui_state_.decay = audio_engine_.decayNormalized();
+  ui_state_.sustain = audio_engine_.sustainNormalized();
+  ui_state_.release = audio_engine_.releaseNormalized();
 
   if (!ui_state_.note_playing && ui_state_.touch_count == 0) {
     ui_state_.touch_xs.fill(0);

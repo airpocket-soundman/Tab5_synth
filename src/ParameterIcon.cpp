@@ -14,7 +14,7 @@ constexpr std::uint32_t kBorderColor = 0xF4F4F4;
 constexpr int kBorderRadius = 12;
 constexpr int kBorderInset = 1;
 
-}  // namespace
+}
 
 void ParameterIcon::begin(const Rect& bounds) {
   bounds_ = bounds;
@@ -23,7 +23,7 @@ void ParameterIcon::begin(const Rect& bounds) {
   initialized_ = true;
 }
 
-void ParameterIcon::drawVolume(float value, bool selected) {
+void ParameterIcon::drawBar(const char* label, float value, bool selected) {
   if (!initialized_) {
     return;
   }
@@ -42,11 +42,10 @@ void ParameterIcon::drawVolume(float value, bool selected) {
   }
 
   sprite_.drawRoundRect(0, 0, bounds_.w, bounds_.h, kBorderRadius, kBorderColor);
-
   sprite_.setTextDatum(middle_center);
   sprite_.setTextColor(selected ? kActiveTextColor : kInactiveTextColor, kBackgroundColor);
   sprite_.setTextSize(2);
-  sprite_.drawString("VOL", bounds_.w / 2, bounds_.h / 2);
+  sprite_.drawString(label, bounds_.w / 2, bounds_.h / 2);
   sprite_.setTextDatum(top_left);
   sprite_.setTextSize(1);
   sprite_.pushSprite(bounds_.x, bounds_.y);

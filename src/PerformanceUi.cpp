@@ -3,13 +3,19 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 
 namespace {
 
 constexpr int kWaveIconInsetX = 10;
 constexpr int kWaveIconInsetTop = 18;
 constexpr int kWaveIconInsetBottom = 18;
+constexpr std::array<UiParameter, 5> kUiParameters = {
+    UiParameter::Volume,
+    UiParameter::Attack,
+    UiParameter::Decay,
+    UiParameter::Sustain,
+    UiParameter::Release,
+};
 
 bool isWaveformIndex(std::size_t index) {
   return index < static_cast<std::size_t>(Waveform::Count);
@@ -34,10 +40,10 @@ void PerformanceUi::begin() {
 void PerformanceUi::drawInitial(const UiState& state) {
   M5.Display.fillScreen(SynthConfig::ui.background_color);
   drawSourceButtons(state);
-  drawParameterIcon(state);
+  drawParameterButtons(state);
   drawPerformanceBase();
   drawPitchModeSwitch(state);
-  drawVolumeControl(state);
+  drawSliderControl(state);
   previous_touch_count_ = 0;
   previous_touch_xs_.fill(0);
   previous_touch_ys_.fill(0);
@@ -54,12 +60,12 @@ void PerformanceUi::refreshSourceSelection(const UiState& state) {
 }
 
 void PerformanceUi::refreshParameterSelection(const UiState& state) {
-  drawParameterIcon(state);
+  drawParameterButtons(state);
 }
 
-void PerformanceUi::refreshVolumeControl(const UiState& state) {
-  drawParameterIcon(state);
-  drawVolumeControl(state);
+void PerformanceUi::refreshParameterControl(const UiState& state) {
+  drawParameterButtons(state);
+  drawSliderControl(state);
 }
 
 void PerformanceUi::refreshPitchMode(const UiState& state) {
@@ -76,15 +82,20 @@ bool PerformanceUi::isSelectionArea(int x, int y) const {
 }
 
 bool PerformanceUi::isParameterArea(int x, int y) const {
-  return parameter_icon_.contains(x, y);
+  for (const auto& icon : parameter_icons_) {
+    if (icon.contains(x, y)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool PerformanceUi::isPerformanceArea(int x, int y) const {
   return performance_area_.contains(x, y);
 }
 
-bool PerformanceUi::isVolumeArea(int x, int y) const {
-  return volume_area_.contains(x, y);
+bool PerformanceUi::isSliderArea(int x, int y) const {
+  return slider_area_.contains(x, y);
 }
 
 bool PerformanceUi::isPitchModeArea(int x, int y) const {
@@ -123,8 +134,10 @@ AudioSourceType PerformanceUi::sourceAt(int x, int y, AudioSourceType fallback) 
 }
 
 UiParameter PerformanceUi::parameterAt(int x, int y, UiParameter fallback) const {
-  if (parameter_button_.contains(x, y)) {
-    return UiParameter::Volume;
+  for (std::size_t i = 0; i < parameter_buttons_.size(); ++i) {
+    if (parameter_buttons_[i].contains(x, y)) {
+      return kUiParameters[i];
+    }
   }
   return fallback;
 }
@@ -138,9 +151,9 @@ float PerformanceUi::xToNoteValue(int x, bool quantize_to_semitone) const {
   return quantize_to_semitone ? std::round(note_value) : note_value;
 }
 
-float PerformanceUi::volumeFromTouch(int x) const {
-  const int slider_left = volume_area_.x + SynthConfig::ui.slider_inset;
-  const int slider_right = volume_area_.x + volume_area_.w - SynthConfig::ui.slider_inset;
+float PerformanceUi::sliderValueFromTouch(int x) const {
+  const int slider_left = slider_area_.x + SynthConfig::ui.slider_inset;
+  const int slider_right = slider_area_.x + slider_area_.w - SynthConfig::ui.slider_inset;
   const int clamped_x = std::clamp(x, slider_left, slider_right);
   return static_cast<float>(clamped_x - slider_left) /
          static_cast<float>(std::max(1, slider_right - slider_left));
@@ -159,6 +172,40 @@ bool PerformanceUi::isSourceAvailable(AudioSourceType source, const UiState& sta
   }
 }
 
+float PerformanceUi::parameterValue(const UiState& state, UiParameter parameter) const {
+  switch (parameter) {
+    case UiParameter::Volume:
+      return state.volume;
+    case UiParameter::Attack:
+      return state.attack;
+    case UiParameter::Decay:
+      return state.decay;
+    case UiParameter::Sustain:
+      return state.sustain;
+    case UiParameter::Release:
+      return state.release;
+    default:
+      return state.volume;
+  }
+}
+
+const char* PerformanceUi::parameterLabel(UiParameter parameter) const {
+  switch (parameter) {
+    case UiParameter::Volume:
+      return "VOL";
+    case UiParameter::Attack:
+      return "ATK";
+    case UiParameter::Decay:
+      return "DEC";
+    case UiParameter::Sustain:
+      return "SUS";
+    case UiParameter::Release:
+      return "REL";
+    default:
+      return "VOL";
+  }
+}
+
 void PerformanceUi::layout() {
   const int width = M5.Display.width();
   const int height = M5.Display.height();
@@ -166,29 +213,39 @@ void PerformanceUi::layout() {
       static_cast<int>(std::round(width * SynthConfig::ui.performance_area_width_ratio)), width / 4, width - 160);
   const int left_width = width - right_zone_width;
 
-  const int total_buttons = static_cast<int>(source_buttons_.size()) + 1;
-  const int button_width =
+  const int source_button_width =
       (left_width - (SynthConfig::ui.wave_button_padding * 2) -
-       (SynthConfig::ui.selection_button_gap * (total_buttons - 1))) /
-      total_buttons;
+       (SynthConfig::ui.selection_button_gap * (static_cast<int>(source_buttons_.size()) - 1))) /
+      static_cast<int>(source_buttons_.size());
 
   for (std::size_t i = 0; i < source_buttons_.size(); ++i) {
     const int x = SynthConfig::ui.wave_button_padding +
-                  static_cast<int>(i) * (button_width + SynthConfig::ui.selection_button_gap);
-    const int y = SynthConfig::ui.wave_button_padding;
-    source_buttons_[i] = {x, y, button_width, SynthConfig::ui.selection_button_height};
+                  static_cast<int>(i) * (source_button_width + SynthConfig::ui.selection_button_gap);
+    source_buttons_[i] = {x, SynthConfig::ui.wave_button_padding, source_button_width,
+                          SynthConfig::ui.selection_button_height};
   }
 
-  parameter_button_ = {source_buttons_.back().x + source_buttons_.back().w + SynthConfig::ui.selection_button_gap,
-                       SynthConfig::ui.wave_button_padding, button_width, SynthConfig::ui.selection_button_height};
-  parameter_icon_.begin(parameter_button_);
+  const int parameter_row_y = SynthConfig::ui.wave_button_padding + SynthConfig::ui.selection_button_height +
+                              SynthConfig::ui.parameter_button_gap;
+  const int parameter_button_width =
+      (left_width - (SynthConfig::ui.wave_button_padding * 2) -
+       (SynthConfig::ui.parameter_button_gap * (static_cast<int>(parameter_buttons_.size()) - 1))) /
+      static_cast<int>(parameter_buttons_.size());
+
+  for (std::size_t i = 0; i < parameter_buttons_.size(); ++i) {
+    const int x = SynthConfig::ui.wave_button_padding +
+                  static_cast<int>(i) * (parameter_button_width + SynthConfig::ui.parameter_button_gap);
+    parameter_buttons_[i] = {x, parameter_row_y, parameter_button_width, SynthConfig::ui.parameter_button_height};
+    parameter_icons_[i].begin(parameter_buttons_[i]);
+  }
 
   const int right_zone_x = left_width;
   const int square_limit = std::min(right_zone_width - (SynthConfig::ui.wave_button_padding * 2),
                                     height - (SynthConfig::ui.wave_button_padding * 2) -
                                         (SynthConfig::ui.pitch_mode_height * 2) -
                                         SynthConfig::ui.pitch_mode_gap * 2);
-  const int square_size = std::max(180, static_cast<int>(std::round(square_limit * SynthConfig::ui.performance_square_scale)));
+  const int square_size =
+      std::max(180, static_cast<int>(std::round(square_limit * SynthConfig::ui.performance_square_scale)));
   const int square_x = right_zone_x + right_zone_width - square_size - SynthConfig::ui.wave_button_padding;
   const int square_y = SynthConfig::ui.performance_square_top_margin;
   performance_area_ = {square_x, square_y, square_size, square_size};
@@ -201,8 +258,8 @@ void PerformanceUi::layout() {
   continuous_button_ = {pitch_mode_area_.x + mode_button_width + SynthConfig::ui.pitch_mode_button_gap,
                         pitch_mode_area_.y, mode_button_width, pitch_mode_area_.h};
 
-  const int volume_y = pitch_mode_area_.y + pitch_mode_area_.h + SynthConfig::ui.pitch_mode_gap;
-  volume_area_ = {pitch_mode_area_.x, volume_y, pitch_mode_area_.w, SynthConfig::ui.pitch_mode_height};
+  const int slider_y = pitch_mode_area_.y + pitch_mode_area_.h + SynthConfig::ui.pitch_mode_gap;
+  slider_area_ = {pitch_mode_area_.x, slider_y, pitch_mode_area_.w, SynthConfig::ui.pitch_mode_height};
 }
 
 void PerformanceUi::drawSourceButtons(const UiState& state) {
@@ -240,8 +297,16 @@ void PerformanceUi::drawSourceButton(std::size_t index, const UiState& state) {
   }
 }
 
-void PerformanceUi::drawParameterIcon(const UiState& state) {
-  parameter_icon_.drawVolume(state.volume, state.selected_parameter == UiParameter::Volume);
+void PerformanceUi::drawParameterButtons(const UiState& state) {
+  for (std::size_t i = 0; i < parameter_buttons_.size(); ++i) {
+    drawParameterButton(i, state);
+  }
+}
+
+void PerformanceUi::drawParameterButton(std::size_t index, const UiState& state) {
+  const UiParameter parameter = kUiParameters[index];
+  parameter_icons_[index].drawBar(parameterLabel(parameter), parameterValue(state, parameter),
+                                  state.selected_parameter == parameter);
 }
 
 void PerformanceUi::drawWaveformIcon(const Rect& rect, Waveform waveform, std::uint32_t color) {
@@ -305,16 +370,17 @@ void PerformanceUi::drawSourceLabel(const Rect& rect, AudioSourceType source, st
   M5.Display.setTextSize(2);
 }
 
-void PerformanceUi::drawVolumeControl(const UiState& state) {
-  M5.Display.fillRoundRect(volume_area_.x, volume_area_.y, volume_area_.w, volume_area_.h,
+void PerformanceUi::drawSliderControl(const UiState& state) {
+  M5.Display.fillRoundRect(slider_area_.x, slider_area_.y, slider_area_.w, slider_area_.h,
                            SynthConfig::ui.round_radius, SynthConfig::ui.muted_button_color);
-  M5.Display.drawRoundRect(volume_area_.x, volume_area_.y, volume_area_.w, volume_area_.h,
+  M5.Display.drawRoundRect(slider_area_.x, slider_area_.y, slider_area_.w, slider_area_.h,
                            SynthConfig::ui.round_radius, SynthConfig::ui.muted_border_color);
 
-  const int track_x = volume_area_.x + SynthConfig::ui.slider_inset;
-  const int track_y = volume_area_.y + (volume_area_.h - SynthConfig::ui.slider_track_height) / 2;
-  const int track_w = volume_area_.w - (SynthConfig::ui.slider_inset * 2);
-  const int fill_w = std::max(8, static_cast<int>(std::round(track_w * state.volume)));
+  const float value = parameterValue(state, state.selected_parameter);
+  const int track_x = slider_area_.x + SynthConfig::ui.slider_inset;
+  const int track_y = slider_area_.y + (slider_area_.h - SynthConfig::ui.slider_track_height) / 2;
+  const int track_w = slider_area_.w - (SynthConfig::ui.slider_inset * 2);
+  const int fill_w = std::max(8, static_cast<int>(std::round(track_w * value)));
 
   M5.Display.fillRoundRect(track_x, track_y, track_w, SynthConfig::ui.slider_track_height, 9,
                            SynthConfig::ui.slider_track_color);
@@ -323,7 +389,7 @@ void PerformanceUi::drawVolumeControl(const UiState& state) {
   M5.Display.fillRoundRect(track_x, track_y, std::min(fill_w, track_w), SynthConfig::ui.slider_track_height, 9,
                            SynthConfig::ui.slider_fill_color);
 
-  const int knob_x = track_x + static_cast<int>(std::round((track_w - 1) * state.volume));
+  const int knob_x = track_x + static_cast<int>(std::round((track_w - 1) * value));
   M5.Display.fillCircle(knob_x, track_y + SynthConfig::ui.slider_track_height / 2, 14,
                         SynthConfig::ui.selected_border_color);
   M5.Display.drawCircle(knob_x, track_y + SynthConfig::ui.slider_track_height / 2, 14,
@@ -367,6 +433,8 @@ void PerformanceUi::eraseTouchMarkers() {
   for (std::size_t i = 0; i < previous_touch_count_; ++i) {
     eraseMarkerAt(previous_touch_xs_[i], previous_touch_ys_[i]);
   }
+  M5.Display.drawRect(performance_area_.x, performance_area_.y, performance_area_.w, performance_area_.h,
+                      SynthConfig::ui.panel_border_color);
   drawCenterGuides(performance_area_);
   previous_touch_count_ = 0;
 }
@@ -435,3 +503,4 @@ void PerformanceUi::drawMarkerAt(int x, int y, std::uint32_t fill) {
   M5.Display.fillCircle(draw_x, draw_y, SynthConfig::ui.marker_radius, fill);
   M5.Display.drawCircle(draw_x, draw_y, SynthConfig::ui.marker_radius, SynthConfig::ui.selected_border_color);
 }
+

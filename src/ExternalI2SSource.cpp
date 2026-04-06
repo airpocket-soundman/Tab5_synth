@@ -38,10 +38,12 @@ void ExternalI2SSource::noteOffAll() {
 
 void ExternalI2SSource::setVolume(float volume) {
   volume_ = std::clamp(volume, 0.0f, 1.0f);
-  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
-    M5.Speaker.setChannelVolume(SynthConfig::audio.audio_channel + static_cast<int>(i),
-                                static_cast<std::uint8_t>(std::lround(volume_ * 255.0f)));
-  }
+}
+
+void ExternalI2SSource::setVoiceLevel(std::size_t voice_index, float level, Waveform /*waveform*/) {
+  const float scaled = std::clamp(level, 0.0f, 1.0f);
+  M5.Speaker.setChannelVolume(SynthConfig::audio.audio_channel + static_cast<int>(voice_index),
+                              static_cast<std::uint8_t>(std::lround(scaled * 255.0f)));
 }
 
 bool ExternalI2SSource::isAvailable() const {
@@ -97,7 +99,7 @@ bool ExternalI2SSource::startMonitor() {
     return false;
   }
 
-  setVolume(volume_);
+  setVoiceLevel(0, volume_, Waveform::Sine);
   if (i2s_channel_enable(rx_handle_) != ESP_OK) {
     return false;
   }

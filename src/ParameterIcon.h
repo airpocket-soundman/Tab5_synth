@@ -7,7 +7,7 @@
 class ParameterIcon {
  public:
   void begin(const Rect& bounds);
-  void drawVolume(float value, bool selected);
+  void drawBar(const char* label, float value, bool selected);
 
   [[nodiscard]] bool contains(int x, int y) const;
 

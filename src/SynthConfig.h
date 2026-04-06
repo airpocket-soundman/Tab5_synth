@@ -32,6 +32,13 @@ struct AudioConfig {
   std::uint32_t external_i2s_sample_rate = 16000;
   std::size_t external_i2s_buffer_frames = 256;
   std::size_t external_i2s_buffer_count = 3;
+  float amp_attack_default_ms = 25.0f;
+  float amp_decay_default_ms = 180.0f;
+  float amp_sustain_default = 0.72f;
+  float amp_release_default_ms = 480.0f;
+  float amp_attack_max_ms = 3000.0f;
+  float amp_decay_max_ms = 3000.0f;
+  float amp_release_max_ms = 4000.0f;
 };
 
 struct UiConfig {
@@ -42,6 +49,8 @@ struct UiConfig {
   int selection_button_text_size = 1;
   int wave_button_padding = 20;
   int wave_icon_thickness = 3;
+  int parameter_button_height = 92;
+  int parameter_button_gap = 10;
   int volume_area_height = 74;
   int slider_track_height = 18;
   int slider_inset = 18;

@@ -20,9 +20,9 @@ bool OscillatorSource::begin() {
 }
 
 bool OscillatorSource::noteOn(std::size_t voice_index, float /*note_value*/, float frequency, Waveform waveform) {
-  updateChannelVolume(voice_index, waveform);
   M5.Speaker.tone(frequency, UINT32_MAX, channelForVoice(voice_index), true, waveformTable(waveform),
                   kWaveTableSize, false);
+  setVoiceLevel(voice_index, volume_, waveform);
   return true;
 }
 
@@ -38,9 +38,12 @@ void OscillatorSource::noteOffAll() {
 
 void OscillatorSource::setVolume(float volume) {
   volume_ = std::clamp(volume, 0.0f, 1.0f);
-  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
-    updateChannelVolume(i, Waveform::Sine);
-  }
+}
+
+void OscillatorSource::setVoiceLevel(std::size_t voice_index, float level, Waveform waveform) {
+  const float scaled = std::clamp(level * SynthConfig::waveformTrim(waveform), 0.0f, 1.0f);
+  M5.Speaker.setChannelVolume(channelForVoice(voice_index),
+                              static_cast<std::uint8_t>(std::lround(scaled * 255.0f)));
 }
 
 bool OscillatorSource::isAvailable() const {
@@ -66,12 +69,6 @@ void OscillatorSource::buildWaveTables() {
   fill_table(saw_wave_, Waveform::Saw);
   fill_table(square_wave_, Waveform::Square);
   fill_table(triangle_wave_, Waveform::Triangle);
-}
-
-void OscillatorSource::updateChannelVolume(std::size_t voice_index, Waveform waveform) const {
-  const float scaled = std::clamp(volume_ * SynthConfig::waveformTrim(waveform), 0.0f, 1.0f);
-  M5.Speaker.setChannelVolume(channelForVoice(voice_index),
-                              static_cast<std::uint8_t>(std::lround(scaled * 255.0f)));
 }
 
 int OscillatorSource::channelForVoice(std::size_t voice_index) const {

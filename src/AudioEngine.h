@@ -2,6 +2,7 @@
 
 #include "AudioSource.h"
 #include "AudioSourceType.h"
+#include "EnvelopeGenerator.h"
 #include "ExternalI2SSource.h"
 #include "OnboardMicSource.h"
 #include "OscillatorSource.h"
@@ -10,14 +11,20 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 
 class AudioEngine {
  public:
   void begin();
+  void update();
   void noteOnVoices(const float* note_values, std::size_t count, Waveform waveform);
   void noteOff();
   void setVolume(float volume);
   void setSourceType(AudioSourceType source_type);
+  void setAttackNormalized(float normalized);
+  void setDecayNormalized(float normalized);
+  void setSustainNormalized(float normalized);
+  void setReleaseNormalized(float normalized);
   bool beginMicSampleRecording();
   void updateMicSampleRecording();
   bool finishMicSampleRecording(bool commit_sample = true);
@@ -32,24 +39,34 @@ class AudioEngine {
   [[nodiscard]] float activeFrequency() const;
   [[nodiscard]] Waveform activeWaveform() const;
   [[nodiscard]] float volume() const;
+  [[nodiscard]] float attackNormalized() const;
+  [[nodiscard]] float decayNormalized() const;
+  [[nodiscard]] float sustainNormalized() const;
+  [[nodiscard]] float releaseNormalized() const;
   [[nodiscard]] AudioSourceType activeSourceType() const;
   [[nodiscard]] std::size_t activeVoiceCount() const;
 
  private:
   static float noteValueToFrequency(float note_value);
+  static float normalizedToMilliseconds(float normalized, float max_ms);
+  static float millisecondsToNormalized(float value_ms, float max_ms);
   AudioSource& sourceFor(AudioSourceType source_type);
   const AudioSource& sourceFor(AudioSourceType source_type) const;
+  void applyEnvelopeSettings();
+  void stopAllImmediately();
   void clearVoices();
 
   std::array<bool, SynthConfig::audio.polyphony_voices> voice_active_{};
   std::array<int, SynthConfig::audio.polyphony_voices> active_midi_notes_{};
   std::array<float, SynthConfig::audio.polyphony_voices> active_note_values_{};
   std::array<float, SynthConfig::audio.polyphony_voices> active_frequencies_{};
+  std::array<EnvelopeGenerator, SynthConfig::audio.polyphony_voices> envelopes_{};
+  EnvelopeSettings amp_envelope_{};
   Waveform active_waveform_ = Waveform::Sine;
   float volume_ = SynthConfig::audio.default_volume;
   AudioSourceType active_source_type_ = AudioSourceType::Oscillator;
+  std::uint32_t last_envelope_update_ms_ = 0;
   OscillatorSource oscillator_source_{};
   OnboardMicSource onboard_mic_source_{};
   ExternalI2SSource external_i2s_source_{};
 };
-
