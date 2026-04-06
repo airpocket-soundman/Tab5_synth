@@ -8,6 +8,7 @@ namespace {
 
 constexpr std::uint32_t kUiRefreshIntervalMs = 33;
 constexpr int kTouchMarkerThreshold = 12;
+constexpr float kVolumeChangeThreshold = 0.01f;
 
 }
 
@@ -40,6 +41,9 @@ void SynthApp::handleTouch() {
     if (touch.wasPressed()) {
       handleWaveformTouch(x, y);
     }
+    if (touch.isPressed() || touch.wasPressed() || touch.isHolding()) {
+      handleVolumeTouch(x, y);
+    }
     return;
   }
 
@@ -54,6 +58,10 @@ void SynthApp::handleTouch() {
 }
 
 void SynthApp::handleWaveformTouch(int x, int y) {
+  if (ui_.isVolumeArea(x, y)) {
+    return;
+  }
+
   const Waveform next_waveform = ui_.waveformAt(x, y, ui_state_.selected_waveform);
   if (next_waveform == ui_state_.selected_waveform) {
     return;
@@ -70,6 +78,22 @@ void SynthApp::handleWaveformTouch(int x, int y) {
     ui_.refreshPerformance(ui_state_);
     last_ui_refresh_ms_ = millis();
   }
+}
+
+void SynthApp::handleVolumeTouch(int x, int y) {
+  if (!ui_.isVolumeArea(x, y)) {
+    return;
+  }
+
+  const float next_volume = ui_.volumeFromTouch(x);
+  if (std::abs(next_volume - ui_state_.volume) < kVolumeChangeThreshold) {
+    return;
+  }
+
+  audio_engine_.setVolume(next_volume);
+  syncUiState();
+  ui_.refreshVolumeControl(ui_state_);
+  last_ui_refresh_ms_ = millis();
 }
 
 void SynthApp::handlePerformanceTouch(int x, int y) {
@@ -103,6 +127,7 @@ void SynthApp::syncUiState() {
   ui_state_.note_playing = audio_engine_.isNotePlaying();
   ui_state_.active_midi_note = audio_engine_.activeMidiNote();
   ui_state_.active_frequency = audio_engine_.activeFrequency();
+  ui_state_.volume = audio_engine_.volume();
 
   if (!ui_state_.note_playing) {
     ui_state_.last_touch_x = -1;

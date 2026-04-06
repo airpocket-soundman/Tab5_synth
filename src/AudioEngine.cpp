@@ -5,53 +5,47 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 
 namespace {
 
-constexpr int kSpeakerVolume = 180;
-constexpr std::uint32_t kSampleRate = 24000;
-constexpr std::size_t kBufferSamples = 256;
-constexpr int kAudioChannel = 0;
-constexpr float kAttackStep = 0.020f;
-constexpr float kReleaseStep = 0.010f;
-constexpr float kAmplitude = 14000.0f;
 constexpr float kTwoPi = 6.28318530718f;
 
 }
 
 void AudioEngine::begin() {
-  M5.Speaker.setVolume(kSpeakerVolume);
-  M5.Speaker.setChannelVolume(kAudioChannel, 255);
-
-  if (task_handle_ == nullptr) {
-    xTaskCreatePinnedToCore(audioTaskEntry, "audio_engine", 4096, this, 3, &task_handle_, 0);
-  }
+  buildWaveTables();
+  M5.Speaker.setVolume(SynthConfig::audio.speaker_volume);
+  updateChannelVolume();
 }
 
 void AudioEngine::noteOn(int midi_note, Waveform waveform) {
   const float frequency = midiToFrequency(midi_note);
+  if (note_playing_ && active_midi_note_ == midi_note && active_waveform_ == waveform) {
+    return;
+  }
 
-  taskENTER_CRITICAL(&mutex_);
-  render_state_.gate = true;
-  render_state_.frequency = frequency;
-  render_state_.waveform = waveform;
-  taskEXIT_CRITICAL(&mutex_);
+  active_waveform_ = waveform;
+  updateChannelVolume();
+  M5.Speaker.tone(frequency, UINT32_MAX, SynthConfig::audio.audio_channel, true, waveformTable(waveform),
+                  kWaveTableSize, false);
 
   note_playing_ = true;
   active_midi_note_ = midi_note;
   active_frequency_ = frequency;
-  active_waveform_ = waveform;
 }
 
 void AudioEngine::noteOff() {
-  taskENTER_CRITICAL(&mutex_);
-  render_state_.gate = false;
-  taskEXIT_CRITICAL(&mutex_);
-
+  M5.Speaker.stop(SynthConfig::audio.audio_channel);
   note_playing_ = false;
   active_midi_note_ = -1;
   active_frequency_ = 0.0f;
+}
+
+void AudioEngine::setVolume(float volume) {
+  volume_ = std::clamp(volume, 0.0f, 1.0f);
+  updateChannelVolume();
 }
 
 bool AudioEngine::isNotePlaying() const {
@@ -70,63 +64,53 @@ Waveform AudioEngine::activeWaveform() const {
   return active_waveform_;
 }
 
-void AudioEngine::audioTaskEntry(void* arg) {
-  static_cast<AudioEngine*>(arg)->audioTaskLoop();
+float AudioEngine::volume() const {
+  return volume_;
 }
 
-void AudioEngine::audioTaskLoop() {
-  std::array<std::array<std::int16_t, kBufferSamples>, 2> buffers{};
-  std::size_t buffer_index = 0;
-
-  for (;;) {
-    RenderState state;
-    taskENTER_CRITICAL(&mutex_);
-    state = render_state_;
-    taskEXIT_CRITICAL(&mutex_);
-
-    fillBuffer(buffers[buffer_index].data(), kBufferSamples);
-
-    const bool should_output = level_ > 0.0005f || state.gate;
-    if (should_output) {
-      while (M5.Speaker.isPlaying(kAudioChannel) >= 2) {
-        vTaskDelay(1);
-      }
-      M5.Speaker.playRaw(buffers[buffer_index].data(), kBufferSamples, kSampleRate, false, 1, kAudioChannel, false);
-      buffer_index = (buffer_index + 1) & 1;
-    } else {
-      vTaskDelay(1);
+void AudioEngine::buildWaveTables() {
+  auto fill_table = [&](auto& table, Waveform waveform) {
+    const float peak = SynthConfig::waveformPeak(waveform);
+    for (std::size_t i = 0; i < kWaveTableSize; ++i) {
+      const float phase = static_cast<float>(i) / static_cast<float>(kWaveTableSize);
+      const float value = waveformValue(waveform, phase);
+      const float sample = std::clamp(SynthConfig::audio.center_sample + value * peak, 1.0f, 255.0f);
+      table[i] = static_cast<std::uint8_t>(std::lround(sample));
     }
-  }
+  };
+
+  fill_table(sine_wave_, Waveform::Sine);
+  fill_table(saw_wave_, Waveform::Saw);
+  fill_table(square_wave_, Waveform::Square);
+  fill_table(triangle_wave_, Waveform::Triangle);
 }
 
-void AudioEngine::fillBuffer(std::int16_t* buffer, std::size_t sample_count) {
-  RenderState state;
-  taskENTER_CRITICAL(&mutex_);
-  state = render_state_;
-  taskEXIT_CRITICAL(&mutex_);
-
-  const float phase_step = state.frequency / static_cast<float>(kSampleRate);
-
-  for (std::size_t i = 0; i < sample_count; ++i) {
-    const float target_level = state.gate ? 1.0f : 0.0f;
-    const float step = state.gate ? kAttackStep : kReleaseStep;
-    level_ += (target_level - level_) * step;
-
-    const float sample = waveformSample(state.waveform, phase_) * level_;
-    buffer[i] = static_cast<std::int16_t>(std::clamp(sample * kAmplitude, -32767.0f, 32767.0f));
-
-    phase_ += phase_step;
-    if (phase_ >= 1.0f) {
-      phase_ -= std::floor(phase_);
-    }
-  }
+void AudioEngine::updateChannelVolume() const {
+  const float scaled = std::clamp(volume_ * SynthConfig::waveformTrim(active_waveform_), 0.0f, 1.0f);
+  M5.Speaker.setChannelVolume(SynthConfig::audio.audio_channel,
+                              static_cast<std::uint8_t>(std::lround(scaled * 255.0f)));
 }
 
 float AudioEngine::midiToFrequency(int midi_note) {
   return 440.0f * std::pow(2.0f, (static_cast<float>(midi_note) - 69.0f) / 12.0f);
 }
 
-float AudioEngine::waveformSample(Waveform waveform, float phase) {
+const unsigned char* AudioEngine::waveformTable(Waveform waveform) const {
+  switch (waveform) {
+    case Waveform::Sine:
+      return sine_wave_.data();
+    case Waveform::Saw:
+      return saw_wave_.data();
+    case Waveform::Square:
+      return square_wave_.data();
+    case Waveform::Triangle:
+      return triangle_wave_.data();
+    default:
+      return sine_wave_.data();
+  }
+}
+
+float AudioEngine::waveformValue(Waveform waveform, float phase) {
   switch (waveform) {
     case Waveform::Sine:
       return std::sinf(phase * kTwoPi);

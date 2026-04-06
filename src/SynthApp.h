@@ -13,6 +13,7 @@ class SynthApp {
  private:
   void handleTouch();
   void handleWaveformTouch(int x, int y);
+  void handleVolumeTouch(int x, int y);
   void handlePerformanceTouch(int x, int y);
   void syncUiState();
   void stopNote();
