@@ -1,5 +1,7 @@
 #pragma once
 
+#include "AudioSourceType.h"
+#include "ParameterIcon.h"
 #include "Rect.h"
 #include "SynthConfig.h"
 #include "Waveform.h"
@@ -9,14 +11,25 @@
 #include <array>
 #include <cstddef>
 
+enum class UiParameter {
+  Volume,
+};
+
 struct UiState {
   Waveform selected_waveform = Waveform::Sine;
+  AudioSourceType selected_source = AudioSourceType::Oscillator;
+  UiParameter selected_parameter = UiParameter::Volume;
+  bool quantize_to_semitone = false;
+  bool oscillator_available = true;
+  bool onboard_mic_available = false;
+  bool external_i2s_available = false;
   bool note_playing = false;
   int active_midi_note = -1;
   float active_frequency = 0.0f;
   float volume = SynthConfig::audio.default_volume;
-  int last_touch_x = -1;
-  int last_touch_y = -1;
+  std::size_t touch_count = 0;
+  std::array<int, SynthConfig::ui.max_touch_points> touch_xs{};
+  std::array<int, SynthConfig::ui.max_touch_points> touch_ys{};
 };
 
 class PerformanceUi {
@@ -24,31 +37,50 @@ class PerformanceUi {
   void begin();
   void drawInitial(const UiState& state);
   void refreshPerformance(const UiState& state);
-  void refreshWaveformSelection(Waveform previous, const UiState& state);
+  void refreshSourceSelection(const UiState& state);
+  void refreshParameterSelection(const UiState& state);
   void refreshVolumeControl(const UiState& state);
+  void refreshPitchMode(const UiState& state);
 
-  [[nodiscard]] bool isWaveformArea(int x) const;
+  [[nodiscard]] bool isSelectionArea(int x, int y) const;
+  [[nodiscard]] bool isParameterArea(int x, int y) const;
   [[nodiscard]] bool isPerformanceArea(int x, int y) const;
   [[nodiscard]] bool isVolumeArea(int x, int y) const;
+  [[nodiscard]] bool isPitchModeArea(int x, int y) const;
+  [[nodiscard]] bool quantizeModeAt(int x, int y, bool fallback) const;
   [[nodiscard]] Waveform waveformAt(int x, int y, Waveform fallback) const;
-  [[nodiscard]] int xToMidiNote(int x) const;
+  [[nodiscard]] AudioSourceType sourceAt(int x, int y, AudioSourceType fallback) const;
+  [[nodiscard]] UiParameter parameterAt(int x, int y, UiParameter fallback) const;
+  [[nodiscard]] float xToNoteValue(int x, bool quantize_to_semitone) const;
   [[nodiscard]] float volumeFromTouch(int x) const;
 
  private:
-  [[nodiscard]] int normalizedTouchX(int x) const;
-  [[nodiscard]] int normalizedTouchY(int y) const;
+  [[nodiscard]] bool isSourceAvailable(AudioSourceType source, const UiState& state) const;
   void layout();
-  void drawWaveformButtons(const UiState& state);
-  void drawWaveformButton(Waveform waveform, const UiState& state);
+  void drawSourceButtons(const UiState& state);
+  void drawSourceButton(std::size_t index, const UiState& state);
+  void drawParameterIcon(const UiState& state);
   void drawWaveformIcon(const Rect& rect, Waveform waveform, std::uint32_t color);
+  void drawSourceLabel(const Rect& rect, AudioSourceType source, std::uint32_t color);
   void drawVolumeControl(const UiState& state);
+  void drawPitchModeSwitch(const UiState& state);
+  void drawPitchModeButton(const Rect& rect, const char* label, bool selected);
   void drawPerformanceBase();
-  void drawCoordinateText(const UiState& state);
-  void drawTouchMarker(const UiState& state);
+  void eraseTouchMarkers();
+  void drawTouchMarkers(const UiState& state);
   void drawCenterGuides(const Rect& bounds);
+  void eraseMarkerAt(int x, int y);
+  void drawMarkerAt(int x, int y, std::uint32_t fill);
 
-  std::array<Rect, static_cast<std::size_t>(Waveform::Count)> waveform_buttons_{};
+  std::array<Rect, 6> source_buttons_{};
+  Rect parameter_button_{};
   Rect volume_area_{};
   Rect performance_area_{};
-  Rect coordinate_text_area_{};
+  Rect pitch_mode_area_{};
+  Rect semitone_button_{};
+  Rect continuous_button_{};
+  ParameterIcon parameter_icon_{};
+  std::size_t previous_touch_count_ = 0;
+  std::array<int, SynthConfig::ui.max_touch_points> previous_touch_xs_{};
+  std::array<int, SynthConfig::ui.max_touch_points> previous_touch_ys_{};
 };

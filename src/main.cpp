@@ -13,7 +13,7 @@ void setup() {
   cfg.serial_baudrate = 115200;
   M5.begin(cfg);
 
-  M5.Display.setRotation(1);
+  M5.Display.setRotation(3);
   M5.Display.setTextSize(2);
   M5.Display.setFont(&fonts::Font4);
 

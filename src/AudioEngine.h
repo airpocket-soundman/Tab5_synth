@@ -1,41 +1,55 @@
 #pragma once
 
+#include "AudioSource.h"
+#include "AudioSourceType.h"
+#include "ExternalI2SSource.h"
+#include "OnboardMicSource.h"
+#include "OscillatorSource.h"
 #include "SynthConfig.h"
 #include "Waveform.h"
 
 #include <array>
 #include <cstddef>
-#include <cstdint>
 
 class AudioEngine {
  public:
   void begin();
-  void noteOn(int midi_note, Waveform waveform);
+  void noteOnVoices(const float* note_values, std::size_t count, Waveform waveform);
   void noteOff();
   void setVolume(float volume);
+  void setSourceType(AudioSourceType source_type);
+  bool beginMicSampleRecording();
+  void updateMicSampleRecording();
+  bool finishMicSampleRecording(bool commit_sample = true);
+  bool recordMicSample();
+  bool hasMicSample() const;
+  bool isMicRecording() const;
 
   [[nodiscard]] bool isNotePlaying() const;
+  [[nodiscard]] bool isCurrentSourceAvailable() const;
+  [[nodiscard]] bool isSourceAvailable(AudioSourceType source_type) const;
   [[nodiscard]] int activeMidiNote() const;
   [[nodiscard]] float activeFrequency() const;
   [[nodiscard]] Waveform activeWaveform() const;
   [[nodiscard]] float volume() const;
+  [[nodiscard]] AudioSourceType activeSourceType() const;
+  [[nodiscard]] std::size_t activeVoiceCount() const;
 
  private:
-  static constexpr std::size_t kWaveTableSize = SynthConfig::audio.wavetable_size;
+  static float noteValueToFrequency(float note_value);
+  AudioSource& sourceFor(AudioSourceType source_type);
+  const AudioSource& sourceFor(AudioSourceType source_type) const;
+  void clearVoices();
 
-  void buildWaveTables();
-  void updateChannelVolume() const;
-  static float midiToFrequency(int midi_note);
-  const unsigned char* waveformTable(Waveform waveform) const;
-  static float waveformValue(Waveform waveform, float phase);
-
-  bool note_playing_ = false;
-  int active_midi_note_ = -1;
-  float active_frequency_ = 0.0f;
+  std::array<bool, SynthConfig::audio.polyphony_voices> voice_active_{};
+  std::array<int, SynthConfig::audio.polyphony_voices> active_midi_notes_{};
+  std::array<float, SynthConfig::audio.polyphony_voices> active_note_values_{};
+  std::array<float, SynthConfig::audio.polyphony_voices> active_frequencies_{};
   Waveform active_waveform_ = Waveform::Sine;
   float volume_ = SynthConfig::audio.default_volume;
-  std::array<std::uint8_t, kWaveTableSize> sine_wave_{};
-  std::array<std::uint8_t, kWaveTableSize> saw_wave_{};
-  std::array<std::uint8_t, kWaveTableSize> square_wave_{};
-  std::array<std::uint8_t, kWaveTableSize> triangle_wave_{};
+  AudioSourceType active_source_type_ = AudioSourceType::Oscillator;
+  OscillatorSource oscillator_source_{};
+  OnboardMicSource onboard_mic_source_{};
+  ExternalI2SSource external_i2s_source_{};
 };
+

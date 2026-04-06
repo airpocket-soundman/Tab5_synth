@@ -3,124 +3,226 @@
 #include <M5Unified.h>
 
 #include <algorithm>
-#include <array>
 #include <cmath>
-#include <cstddef>
-#include <cstdint>
-
-namespace {
-
-constexpr float kTwoPi = 6.28318530718f;
-
-}
 
 void AudioEngine::begin() {
-  buildWaveTables();
   M5.Speaker.setVolume(SynthConfig::audio.speaker_volume);
-  updateChannelVolume();
+  clearVoices();
+  oscillator_source_.begin();
+  onboard_mic_source_.begin();
+  external_i2s_source_.begin();
+  oscillator_source_.setVolume(volume_);
+  onboard_mic_source_.setVolume(volume_);
+  external_i2s_source_.setVolume(volume_);
 }
 
-void AudioEngine::noteOn(int midi_note, Waveform waveform) {
-  const float frequency = midiToFrequency(midi_note);
-  if (note_playing_ && active_midi_note_ == midi_note && active_waveform_ == waveform) {
+void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Waveform waveform) {
+  AudioSource& source = sourceFor(active_source_type_);
+  if (!source.isAvailable() || count == 0) {
+    noteOff();
     return;
   }
 
-  active_waveform_ = waveform;
-  updateChannelVolume();
-  M5.Speaker.tone(frequency, UINT32_MAX, SynthConfig::audio.audio_channel, true, waveformTable(waveform),
-                  kWaveTableSize, false);
+  const std::size_t clamped_count = std::min(count, SynthConfig::audio.polyphony_voices);
 
-  note_playing_ = true;
-  active_midi_note_ = midi_note;
-  active_frequency_ = frequency;
+  if (active_source_type_ == AudioSourceType::ExternalI2S) {
+    const float frequency = noteValueToFrequency(note_values[0]);
+    if (!source.noteOn(0, note_values[0], frequency, waveform)) {
+      noteOff();
+      return;
+    }
+    clearVoices();
+    voice_active_[0] = true;
+    active_midi_notes_[0] = static_cast<int>(std::lround(note_values[0]));
+    active_frequencies_[0] = frequency;
+    active_waveform_ = waveform;
+    return;
+  }
+
+  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+    if (i < clamped_count) {
+      const float frequency = noteValueToFrequency(note_values[i]);
+      const bool retrigger_required = active_source_type_ != AudioSourceType::OnboardMic ||
+                                      !voice_active_[i] ||
+                                      std::fabs(active_note_values_[i] - note_values[i]) >= 0.05f;
+      if (!retrigger_required) {
+        active_midi_notes_[i] = static_cast<int>(std::lround(note_values[i]));
+        active_note_values_[i] = note_values[i];
+        active_frequencies_[i] = frequency;
+        continue;
+      }
+
+      if (source.noteOn(i, note_values[i], frequency, waveform)) {
+        voice_active_[i] = true;
+        active_midi_notes_[i] = static_cast<int>(std::lround(note_values[i]));
+        active_note_values_[i] = note_values[i];
+        active_frequencies_[i] = frequency;
+      } else {
+        voice_active_[i] = false;
+        active_midi_notes_[i] = -1;
+        active_note_values_[i] = 0.0f;
+        active_frequencies_[i] = 0.0f;
+      }
+    } else if (voice_active_[i]) {
+      source.noteOff(i);
+      voice_active_[i] = false;
+      active_midi_notes_[i] = -1;
+      active_note_values_[i] = 0.0f;
+      active_frequencies_[i] = 0.0f;
+    }
+  }
+
+  active_waveform_ = waveform;
 }
 
 void AudioEngine::noteOff() {
-  M5.Speaker.stop(SynthConfig::audio.audio_channel);
-  note_playing_ = false;
-  active_midi_note_ = -1;
-  active_frequency_ = 0.0f;
+  sourceFor(active_source_type_).noteOffAll();
+  clearVoices();
 }
 
 void AudioEngine::setVolume(float volume) {
   volume_ = std::clamp(volume, 0.0f, 1.0f);
-  updateChannelVolume();
+  oscillator_source_.setVolume(volume_);
+  onboard_mic_source_.setVolume(volume_);
+  external_i2s_source_.setVolume(volume_);
+}
+
+void AudioEngine::setSourceType(AudioSourceType source_type) {
+  if (active_source_type_ == source_type) {
+    return;
+  }
+
+  noteOff();
+  active_source_type_ = source_type;
+}
+
+bool AudioEngine::beginMicSampleRecording() {
+  noteOff();
+  const bool started = onboard_mic_source_.beginRecording();
+  if (started) {
+    active_source_type_ = AudioSourceType::OnboardMic;
+  }
+  return started;
+}
+
+void AudioEngine::updateMicSampleRecording() {
+  onboard_mic_source_.updateRecording();
+}
+
+bool AudioEngine::finishMicSampleRecording(bool commit_sample) {
+  const bool recorded = onboard_mic_source_.finishRecording(commit_sample);
+  if (recorded) {
+    active_source_type_ = AudioSourceType::OnboardMic;
+  }
+  return recorded;
+}
+
+bool AudioEngine::recordMicSample() {
+  noteOff();
+  const bool recorded = onboard_mic_source_.recordSample();
+  if (recorded) {
+    active_source_type_ = AudioSourceType::OnboardMic;
+  }
+  return recorded;
+}
+
+bool AudioEngine::hasMicSample() const {
+  return onboard_mic_source_.hasSample();
 }
 
 bool AudioEngine::isNotePlaying() const {
-  return note_playing_;
+  return activeVoiceCount() > 0;
+}
+
+bool AudioEngine::isCurrentSourceAvailable() const {
+  return sourceFor(active_source_type_).isAvailable();
+}
+
+bool AudioEngine::isSourceAvailable(AudioSourceType source_type) const {
+  return sourceFor(source_type).isAvailable();
 }
 
 int AudioEngine::activeMidiNote() const {
-  return active_midi_note_;
+  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+    if (voice_active_[i]) {
+      return active_midi_notes_[i];
+    }
+  }
+  return -1;
 }
 
 float AudioEngine::activeFrequency() const {
-  return active_frequency_;
+  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+    if (voice_active_[i]) {
+      return active_frequencies_[i];
+    }
+  }
+  return 0.0f;
 }
 
 Waveform AudioEngine::activeWaveform() const {
   return active_waveform_;
 }
 
+bool AudioEngine::isMicRecording() const {
+  return onboard_mic_source_.isRecording();
+}
+
 float AudioEngine::volume() const {
   return volume_;
 }
 
-void AudioEngine::buildWaveTables() {
-  auto fill_table = [&](auto& table, Waveform waveform) {
-    const float peak = SynthConfig::waveformPeak(waveform);
-    for (std::size_t i = 0; i < kWaveTableSize; ++i) {
-      const float phase = static_cast<float>(i) / static_cast<float>(kWaveTableSize);
-      const float value = waveformValue(waveform, phase);
-      const float sample = std::clamp(SynthConfig::audio.center_sample + value * peak, 1.0f, 255.0f);
-      table[i] = static_cast<std::uint8_t>(std::lround(sample));
+AudioSourceType AudioEngine::activeSourceType() const {
+  return active_source_type_;
+}
+
+std::size_t AudioEngine::activeVoiceCount() const {
+  std::size_t count = 0;
+  for (bool active : voice_active_) {
+    if (active) {
+      ++count;
     }
-  };
-
-  fill_table(sine_wave_, Waveform::Sine);
-  fill_table(saw_wave_, Waveform::Saw);
-  fill_table(square_wave_, Waveform::Square);
-  fill_table(triangle_wave_, Waveform::Triangle);
+  }
+  return count;
 }
 
-void AudioEngine::updateChannelVolume() const {
-  const float scaled = std::clamp(volume_ * SynthConfig::waveformTrim(active_waveform_), 0.0f, 1.0f);
-  M5.Speaker.setChannelVolume(SynthConfig::audio.audio_channel,
-                              static_cast<std::uint8_t>(std::lround(scaled * 255.0f)));
+float AudioEngine::noteValueToFrequency(float note_value) {
+  return 440.0f * std::pow(2.0f, (note_value - 69.0f) / 12.0f);
 }
 
-float AudioEngine::midiToFrequency(int midi_note) {
-  return 440.0f * std::pow(2.0f, (static_cast<float>(midi_note) - 69.0f) / 12.0f);
-}
-
-const unsigned char* AudioEngine::waveformTable(Waveform waveform) const {
-  switch (waveform) {
-    case Waveform::Sine:
-      return sine_wave_.data();
-    case Waveform::Saw:
-      return saw_wave_.data();
-    case Waveform::Square:
-      return square_wave_.data();
-    case Waveform::Triangle:
-      return triangle_wave_.data();
+AudioSource& AudioEngine::sourceFor(AudioSourceType source_type) {
+  switch (source_type) {
+    case AudioSourceType::Oscillator:
+      return oscillator_source_;
+    case AudioSourceType::OnboardMic:
+      return onboard_mic_source_;
+    case AudioSourceType::ExternalI2S:
+      return external_i2s_source_;
     default:
-      return sine_wave_.data();
+      return oscillator_source_;
   }
 }
 
-float AudioEngine::waveformValue(Waveform waveform, float phase) {
-  switch (waveform) {
-    case Waveform::Sine:
-      return std::sinf(phase * kTwoPi);
-    case Waveform::Saw:
-      return (2.0f * phase) - 1.0f;
-    case Waveform::Square:
-      return phase < 0.5f ? 1.0f : -1.0f;
-    case Waveform::Triangle:
-      return 1.0f - 4.0f * std::fabs(phase - 0.5f);
+const AudioSource& AudioEngine::sourceFor(AudioSourceType source_type) const {
+  switch (source_type) {
+    case AudioSourceType::Oscillator:
+      return oscillator_source_;
+    case AudioSourceType::OnboardMic:
+      return onboard_mic_source_;
+    case AudioSourceType::ExternalI2S:
+      return external_i2s_source_;
     default:
-      return 0.0f;
+      return oscillator_source_;
   }
 }
+
+void AudioEngine::clearVoices() {
+  voice_active_.fill(false);
+  active_midi_notes_.fill(-1);
+  active_frequencies_.fill(0.0f);
+}
+
+
+
+
+
