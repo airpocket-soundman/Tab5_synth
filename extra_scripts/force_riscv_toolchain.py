@@ -1,12 +1,13 @@
-Import("env", "projenv")
+﻿Import("env")
 
 import os
 from pathlib import Path
+from typing import Optional
 
 print("[force_riscv_toolchain] script loaded")
 
 
-def find_toolchain_dir() -> Path | None:
+def find_toolchain_root() -> Optional[Path]:
     package_dir = env.PioPlatform().get_package_dir("toolchain-riscv32-esp")
     if package_dir:
         return Path(package_dir)
@@ -15,40 +16,52 @@ def find_toolchain_dir() -> Path | None:
     if not home.exists():
         return None
 
-    candidates = sorted(home.glob("toolchain-riscv32-esp*"), key=lambda p: p.name, reverse=True)
-    for candidate in candidates:
-        if (candidate / "bin" / "riscv32-esp-elf-g++.exe").exists():
+    for candidate in sorted(home.glob("toolchain-riscv32-esp*"), key=lambda p: p.name, reverse=True):
+        if candidate.exists():
             return candidate
     return None
 
 
-def apply_toolchain(target_env, package_dir: Path, label: str) -> None:
-    bin_dir = package_dir / "bin"
-    bin_path = str(bin_dir)
-    print(f"[force_riscv_toolchain] applying to {label}: {bin_path}")
-
-    target_env.PrependENVPath("PATH", bin_path)
-    target_env["ENV"]["PATH"] = bin_path + os.pathsep + target_env["ENV"].get("PATH", "")
-
-    tools = {
-        "AS": "riscv32-esp-elf-as.exe",
-        "CC": "riscv32-esp-elf-gcc.exe",
-        "CXX": "riscv32-esp-elf-g++.exe",
-        "AR": "riscv32-esp-elf-gcc-ar.exe",
-        "RANLIB": "riscv32-esp-elf-gcc-ranlib.exe",
-        "SIZETOOL": "riscv32-esp-elf-size.exe",
-    }
-
-    for key, executable in tools.items():
-        executable_path = bin_dir / executable
-        if executable_path.exists():
-            print(f"[force_riscv_toolchain] set {label} {key} -> {executable_path}")
-            target_env.Replace(**{key: str(executable_path)})
+def resolve_bin_dir(root: Path) -> Optional[Path]:
+    candidates = [
+        root / "bin",
+        root / "riscv32-esp-elf" / "bin",
+    ]
+    for p in candidates:
+        if (p / "riscv32-esp-elf-g++.exe").exists():
+            return p
+    return None
 
 
-package_dir = find_toolchain_dir()
-print(f"[force_riscv_toolchain] package_dir={package_dir}")
-if package_dir:
-    apply_toolchain(env, package_dir, "env")
-    apply_toolchain(projenv, package_dir, "projenv")
-    os.environ["PATH"] = str(package_dir / "bin") + os.pathsep + os.environ.get("PATH", "")
+def resolve_picolibc_include(root: Path) -> Optional[Path]:
+    candidates = [
+        root / "picolibc" / "include",
+        root / "riscv32-esp-elf" / "picolibc" / "include",
+    ]
+    for p in candidates:
+        if (p / "machine" / "_default_types.h").exists() and (p / "bits" / "c++config.h").exists():
+            return p
+    return None
+
+
+def set_tool(name: str, bin_dir: Path, exe_name: str) -> None:
+    exe = bin_dir / exe_name
+    if exe.exists():
+        env.Replace(**{name: str(exe)})
+        print(f"[force_riscv_toolchain] set {name} -> {exe}")
+
+
+root = find_toolchain_root()
+print(f"[force_riscv_toolchain] root={root}")
+if root is not None:
+    bin_dir = resolve_bin_dir(root)
+    print(f"[force_riscv_toolchain] bin_dir={bin_dir}")
+    if bin_dir is not None:
+        env.PrependENVPath("PATH", str(bin_dir))
+        os.environ["PATH"] = str(bin_dir) + os.pathsep + os.environ.get("PATH", "")
+        set_tool("AS", bin_dir, "riscv32-esp-elf-as.exe")
+        set_tool("CC", bin_dir, "riscv32-esp-elf-gcc.exe")
+        set_tool("CXX", bin_dir, "riscv32-esp-elf-g++.exe")
+        set_tool("AR", bin_dir, "riscv32-esp-elf-gcc-ar.exe")
+        set_tool("RANLIB", bin_dir, "riscv32-esp-elf-gcc-ranlib.exe")
+        set_tool("SIZETOOL", bin_dir, "riscv32-esp-elf-size.exe")

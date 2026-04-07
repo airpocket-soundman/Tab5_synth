@@ -50,9 +50,7 @@ bool OscillatorSource::isAvailable() const {
   return true;
 }
 
-AudioSourceType OscillatorSource::type() const {
-  return AudioSourceType::Oscillator;
-}
+AudioSourceType OscillatorSource::type() const { return AudioSourceType::Oscillator; }
 
 void OscillatorSource::buildWaveTables() {
   auto fill_table = [&](auto& table, Waveform waveform) {

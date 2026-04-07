@@ -365,12 +365,15 @@ void PerformanceUi::layout() {
   const int slider_y = pitch_mode_area_.y + pitch_mode_area_.h + SynthConfig::ui.pitch_mode_gap;
   slider_area_ = {pitch_mode_area_.x, slider_y, pitch_mode_area_.w, SynthConfig::ui.pitch_mode_height};
 
-  const int keyboard_top = std::max(parameter_row_y + SynthConfig::ui.parameter_button_height + SynthConfig::ui.keyboard_top_gap,
-                                    slider_area_.y + slider_area_.h + SynthConfig::ui.keyboard_top_gap);
-  const int available_keyboard_height = std::max(0, height - keyboard_top - SynthConfig::ui.keyboard_bottom_margin);
-  const int keyboard_height = std::max(
-      SynthConfig::ui.keyboard_min_height,
-      static_cast<int>(std::round(available_keyboard_height * SynthConfig::ui.keyboard_height_scale)));
+  const int keyboard_top_min =
+      std::max(parameter_row_y + SynthConfig::ui.parameter_button_height + SynthConfig::ui.keyboard_top_gap,
+               slider_area_.y + slider_area_.h + SynthConfig::ui.keyboard_top_gap);
+  const int max_keyboard_height = std::max(0, height - keyboard_top_min);
+  const int desired_keyboard_height =
+      static_cast<int>(std::round(static_cast<float>(max_keyboard_height) * SynthConfig::ui.keyboard_height_scale));
+  const int keyboard_height = std::clamp(desired_keyboard_height, std::min(SynthConfig::ui.keyboard_min_height, max_keyboard_height),
+                                         max_keyboard_height);
+  const int keyboard_top = height - keyboard_height;
   keyboard_area_ = {SynthConfig::ui.keyboard_side_margin, keyboard_top,
                     width - (SynthConfig::ui.keyboard_side_margin * 2), keyboard_height};
 }

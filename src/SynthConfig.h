@@ -11,10 +11,10 @@ namespace SynthConfig {
 struct AudioConfig {
   int speaker_volume = 255;
   int audio_channel = 0;
-  std::size_t polyphony_voices = 5;
+  std::size_t polyphony_voices = 8;
   float default_volume = 0.7f;
   float center_sample = 128.0f;
-  std::size_t wavetable_size = 64;
+  std::size_t wavetable_size = 256;
   float sine_peak = 127.0f;
   float saw_peak = 46.0f;
   float square_peak = 34.0f;

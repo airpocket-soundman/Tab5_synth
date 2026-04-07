@@ -37,9 +37,11 @@ void AudioEngine::update() {
     if (!envelopes_[i].isActive()) {
       source.noteOff(i);
       voice_active_[i] = false;
+      voice_held_[i] = false;
       active_midi_notes_[i] = -1;
       active_note_values_[i] = 0.0f;
       active_frequencies_[i] = 0.0f;
+      voice_started_order_[i] = 0;
       continue;
     }
 
@@ -66,46 +68,110 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
       envelopes_[0].noteOn();
     }
     voice_active_[0] = true;
+    voice_held_[0] = true;
     active_midi_notes_[0] = static_cast<int>(std::lround(note_values[0]));
     active_note_values_[0] = note_values[0];
     active_frequencies_[0] = frequency;
+    voice_started_order_[0] = next_voice_order_++;
     active_waveform_ = waveform;
     for (std::size_t i = 1; i < SynthConfig::audio.polyphony_voices; ++i) {
-      if (voice_active_[i]) {
+      if (voice_active_[i] && voice_held_[i]) {
+        voice_held_[i] = false;
         envelopes_[i].noteOff();
       }
     }
     return;
   }
 
+  std::array<bool, SynthConfig::audio.polyphony_voices> matched_input{};
+  matched_input.fill(false);
+
+  // Keep voices for notes that are still held.
   for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
-    if (i < clamped_count) {
-      const float frequency = noteValueToFrequency(note_values[i]);
-      const bool retrigger_required = active_source_type_ != AudioSourceType::OnboardMic ||
-                                      !voice_active_[i] ||
-                                      std::fabs(active_note_values_[i] - note_values[i]) >= 0.05f;
-      if (retrigger_required) {
-        if (!source.noteOn(i, note_values[i], frequency, waveform)) {
-          voice_active_[i] = false;
-          active_midi_notes_[i] = -1;
-          active_note_values_[i] = 0.0f;
-          active_frequencies_[i] = 0.0f;
-          envelopes_[i].reset();
-          continue;
-        }
+    if (!voice_active_[i] || !voice_held_[i]) {
+      continue;
+    }
+    bool found = false;
+    for (std::size_t j = 0; j < clamped_count; ++j) {
+      if (matched_input[j]) {
+        continue;
       }
-
-      if (!voice_active_[i]) {
-        envelopes_[i].noteOn();
+      if (std::fabs(active_note_values_[i] - note_values[j]) < 0.05f) {
+        matched_input[j] = true;
+        found = true;
+        break;
       }
-
-      voice_active_[i] = true;
-      active_midi_notes_[i] = static_cast<int>(std::lround(note_values[i]));
-      active_note_values_[i] = note_values[i];
-      active_frequencies_[i] = frequency;
-    } else if (voice_active_[i]) {
+    }
+    if (!found) {
+      voice_held_[i] = false;
       envelopes_[i].noteOff();
     }
+  }
+
+  auto pick_voice_for_new_note = [&]() -> std::size_t {
+    constexpr std::size_t npos = static_cast<std::size_t>(-1);
+
+    for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+      if (!voice_active_[i]) {
+        return i;
+      }
+    }
+
+    std::size_t oldest_release = npos;
+    std::uint32_t oldest_release_order = UINT32_MAX;
+    for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+      if (voice_active_[i] && !voice_held_[i] && voice_started_order_[i] < oldest_release_order) {
+        oldest_release_order = voice_started_order_[i];
+        oldest_release = i;
+      }
+    }
+    if (oldest_release != npos) {
+      return oldest_release;
+    }
+
+    std::size_t oldest_held = 0;
+    std::uint32_t oldest_held_order = UINT32_MAX;
+    for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+      if (voice_started_order_[i] < oldest_held_order) {
+        oldest_held_order = voice_started_order_[i];
+        oldest_held = i;
+      }
+    }
+    return oldest_held;
+  };
+
+  for (std::size_t j = 0; j < clamped_count; ++j) {
+    if (matched_input[j]) {
+      continue;
+    }
+
+    const std::size_t voice_index = pick_voice_for_new_note();
+    if (voice_active_[voice_index]) {
+      source.setVoiceLevel(voice_index, 0.0f, active_waveform_);
+    }
+
+    const float note_value = note_values[j];
+    const float frequency = noteValueToFrequency(note_value);
+    envelopes_[voice_index].reset();
+    envelopes_[voice_index].noteOn();
+    if (!source.noteOn(voice_index, note_value, frequency, waveform)) {
+      voice_active_[voice_index] = false;
+      voice_held_[voice_index] = false;
+      active_midi_notes_[voice_index] = -1;
+      active_note_values_[voice_index] = 0.0f;
+      active_frequencies_[voice_index] = 0.0f;
+      voice_started_order_[voice_index] = 0;
+      envelopes_[voice_index].reset();
+      continue;
+    }
+    source.setVoiceLevel(voice_index, 0.0f, waveform);
+
+    voice_active_[voice_index] = true;
+    voice_held_[voice_index] = true;
+    active_midi_notes_[voice_index] = static_cast<int>(std::lround(note_value));
+    active_note_values_[voice_index] = note_value;
+    active_frequencies_[voice_index] = frequency;
+    voice_started_order_[voice_index] = next_voice_order_++;
   }
 
   active_waveform_ = waveform;
@@ -113,7 +179,8 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
 
 void AudioEngine::noteOff() {
   for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
-    if (voice_active_[i]) {
+    if (voice_active_[i] && voice_held_[i]) {
+      voice_held_[i] = false;
       envelopes_[i].noteOff();
     }
   }
@@ -315,9 +382,12 @@ void AudioEngine::stopAllImmediately() {
 
 void AudioEngine::clearVoices() {
   voice_active_.fill(false);
+  voice_held_.fill(false);
   active_midi_notes_.fill(-1);
   active_note_values_.fill(0.0f);
   active_frequencies_.fill(0.0f);
+  voice_started_order_.fill(0);
+  next_voice_order_ = 1;
   for (auto& envelope : envelopes_) {
     envelope.reset();
   }

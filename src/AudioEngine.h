@@ -57,9 +57,12 @@ class AudioEngine {
   void clearVoices();
 
   std::array<bool, SynthConfig::audio.polyphony_voices> voice_active_{};
+  std::array<bool, SynthConfig::audio.polyphony_voices> voice_held_{};
   std::array<int, SynthConfig::audio.polyphony_voices> active_midi_notes_{};
   std::array<float, SynthConfig::audio.polyphony_voices> active_note_values_{};
   std::array<float, SynthConfig::audio.polyphony_voices> active_frequencies_{};
+  std::array<std::uint32_t, SynthConfig::audio.polyphony_voices> voice_started_order_{};
+  std::uint32_t next_voice_order_ = 1;
   std::array<EnvelopeGenerator, SynthConfig::audio.polyphony_voices> envelopes_{};
   EnvelopeSettings amp_envelope_{};
   Waveform active_waveform_ = Waveform::Sine;

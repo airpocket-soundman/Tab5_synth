@@ -10,6 +10,7 @@ namespace {
 constexpr std::uint32_t kUiRefreshIntervalMs = 33;
 constexpr int kTouchMarkerThreshold = 12;
 constexpr float kParameterChangeThreshold = 0.01f;
+constexpr int kKeyboardOctaveShift = 24;
 
 bool touchMovedEnough(int current_x, int current_y, int previous_x, int previous_y) {
   return std::abs(current_x - previous_x) >= kTouchMarkerThreshold ||
@@ -119,8 +120,10 @@ void SynthApp::handleTouch() {
 
     if (isTouchActive(touch) && ui_.isKeyboardArea(x, y)) {
       const int keyboard_note = static_cast<int>(std::lround(ui_.keyboardNoteValueAt(x, y)));
+      const int shifted_keyboard_note =
+          std::clamp(keyboard_note + kKeyboardOctaveShift, SynthConfig::ui.min_midi_note, SynthConfig::ui.max_midi_note);
       if (note_count < SynthConfig::ui.max_touch_points) {
-        note_values[note_count] = static_cast<float>(keyboard_note);
+        note_values[note_count] = static_cast<float>(shifted_keyboard_note);
         ++note_count;
       }
       if (keyboard_note_count < SynthConfig::ui.max_touch_points) {
