@@ -11,6 +11,7 @@ constexpr std::uint32_t kUiRefreshIntervalMs = 33;
 constexpr int kTouchMarkerThreshold = 12;
 constexpr float kParameterChangeThreshold = 0.01f;
 constexpr int kKeyboardOctaveShift = 24;
+constexpr std::uint32_t kTouchReleaseGuardMs = 12;
 
 bool touchMovedEnough(int current_x, int current_y, int previous_x, int previous_y) {
   return std::abs(current_x - previous_x) >= kTouchMarkerThreshold ||
@@ -28,6 +29,7 @@ void SynthApp::begin() {
   audio_engine_.begin();
   syncUiState();
   ui_.drawInitial(ui_state_);
+  last_note_input_ms_ = millis();
   last_ui_refresh_ms_ = millis();
 }
 
@@ -37,6 +39,7 @@ void SynthApp::update() {
 }
 
 void SynthApp::handleTouch() {
+  const std::uint32_t now = millis();
   const std::uint8_t count = M5.Touch.getCount();
   bool mic_button_active = false;
 
@@ -63,7 +66,8 @@ void SynthApp::handleTouch() {
   }
 
   if (count == 0) {
-    if (ui_state_.touch_count > 0 || ui_state_.keyboard_note_count > 0) {
+    const bool release_guard_elapsed = (now - last_note_input_ms_) >= kTouchReleaseGuardMs;
+    if (release_guard_elapsed && (ui_state_.touch_count > 0 || ui_state_.keyboard_note_count > 0)) {
       stopNote();
     }
     return;
@@ -134,8 +138,10 @@ void SynthApp::handleTouch() {
   }
 
   if (note_count > 0) {
+    last_note_input_ms_ = now;
     handlePerformanceTouches(note_values, note_count, pad_xs, pad_ys, pad_count, keyboard_notes, keyboard_note_count);
-  } else if (ui_state_.touch_count > 0 || ui_state_.keyboard_note_count > 0) {
+  } else if ((now - last_note_input_ms_) >= kTouchReleaseGuardMs &&
+             (ui_state_.touch_count > 0 || ui_state_.keyboard_note_count > 0)) {
     stopNote();
   }
 }

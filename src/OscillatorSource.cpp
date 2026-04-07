@@ -22,7 +22,6 @@ bool OscillatorSource::begin() {
 bool OscillatorSource::noteOn(std::size_t voice_index, float /*note_value*/, float frequency, Waveform waveform) {
   M5.Speaker.tone(frequency, UINT32_MAX, channelForVoice(voice_index), true, waveformTable(waveform),
                   kWaveTableSize, false);
-  setVoiceLevel(voice_index, volume_, waveform);
   return true;
 }
 

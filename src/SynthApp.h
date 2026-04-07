@@ -32,6 +32,7 @@ class SynthApp {
   UiState ui_state_{};
   bool mic_recording_ = false;
   std::uint32_t mic_recording_started_ms_ = 0;
+  std::uint32_t last_note_input_ms_ = 0;
   std::uint32_t last_ui_refresh_ms_ = 0;
   std::size_t last_drawn_touch_count_ = 0;
   std::array<int, SynthConfig::ui.max_touch_points> last_drawn_touch_xs_{};

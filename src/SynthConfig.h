@@ -9,17 +9,17 @@
 namespace SynthConfig {
 
 struct AudioConfig {
-  int speaker_volume = 255;
+  int speaker_volume = 180;
   int audio_channel = 0;
   std::size_t polyphony_voices = 8;
-  float default_volume = 0.7f;
+  float default_volume = 0.45f;
   float center_sample = 128.0f;
   std::size_t wavetable_size = 256;
-  float sine_peak = 127.0f;
+  float sine_peak = 100.0f;
   float saw_peak = 46.0f;
   float square_peak = 34.0f;
   float triangle_peak = 127.0f;
-  float sine_trim = 1.20f;
+  float sine_trim = 0.90f;
   float saw_trim = 0.88f;
   float square_trim = 0.82f;
   float triangle_trim = 0.94f;
@@ -32,7 +32,7 @@ struct AudioConfig {
   std::uint32_t external_i2s_sample_rate = 16000;
   std::size_t external_i2s_buffer_frames = 256;
   std::size_t external_i2s_buffer_count = 3;
-  float amp_attack_default_ms = 25.0f;
+  float amp_attack_default_ms = 8.0f;
   float amp_decay_default_ms = 180.0f;
   float amp_sustain_default = 0.72f;
   float amp_release_default_ms = 480.0f;
