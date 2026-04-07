@@ -62,6 +62,16 @@ struct UiConfig {
   int pitch_mode_gap = 16;
   int pitch_mode_height = 64;
   int pitch_mode_button_gap = 12;
+  int keyboard_top_gap = 20;
+  int keyboard_side_margin = 20;
+  int keyboard_bottom_margin = 20;
+  int keyboard_min_height = 60;
+  // 鍵盤エリアに割り当てる高さ比率。1.0で利用可能高さすべて、0.5で半分。
+  float keyboard_height_scale = 0.5f;
+  float keyboard_black_height_ratio = 0.6f;
+  float keyboard_black_width_ratio = 0.62f;
+  int keyboard_root_note = 48;
+  int keyboard_octaves = 2;
   int center_guide_segment = 8;
   int center_guide_gap = 6;
   int min_midi_note = 48;
@@ -80,6 +90,9 @@ struct UiConfig {
   std::uint32_t selected_text_color = 0x081018;
   std::uint32_t slider_fill_color = 0x4CC9F0;
   std::uint32_t slider_track_color = 0x162033;
+  std::uint32_t keyboard_white_color = 0xF1F2F4;
+  std::uint32_t keyboard_black_color = 0x0E1118;
+  std::uint32_t keyboard_line_color = 0x2C3444;
 };
 
 inline constexpr AudioConfig audio{};

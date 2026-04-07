@@ -62,15 +62,19 @@ void SynthApp::handleTouch() {
   }
 
   if (count == 0) {
-    if (audio_engine_.isNotePlaying() || ui_state_.touch_count > 0) {
+    if (ui_state_.touch_count > 0 || ui_state_.keyboard_note_count > 0) {
       stopNote();
     }
     return;
   }
 
-  std::array<int, SynthConfig::ui.max_touch_points> perf_xs{};
-  std::array<int, SynthConfig::ui.max_touch_points> perf_ys{};
-  std::size_t perf_count = 0;
+  std::array<int, SynthConfig::ui.max_touch_points> pad_xs{};
+  std::array<int, SynthConfig::ui.max_touch_points> pad_ys{};
+  std::array<float, SynthConfig::ui.max_touch_points> note_values{};
+  std::array<int, SynthConfig::ui.max_touch_points> keyboard_notes{};
+  std::size_t pad_count = 0;
+  std::size_t note_count = 0;
+  std::size_t keyboard_note_count = 0;
 
   for (std::uint8_t i = 0; i < count && i < SynthConfig::ui.max_touch_points; ++i) {
     const auto& touch = M5.Touch.getDetail(i);
@@ -101,15 +105,34 @@ void SynthApp::handleTouch() {
     }
 
     if (isTouchActive(touch) && ui_.isPerformanceArea(x, y)) {
-      perf_xs[perf_count] = x;
-      perf_ys[perf_count] = y;
-      ++perf_count;
+      if (pad_count < SynthConfig::ui.max_touch_points) {
+        pad_xs[pad_count] = x;
+        pad_ys[pad_count] = y;
+        ++pad_count;
+      }
+      if (note_count < SynthConfig::ui.max_touch_points) {
+        note_values[note_count] = ui_.xToNoteValue(x, ui_state_.quantize_to_semitone);
+        ++note_count;
+      }
+      continue;
+    }
+
+    if (isTouchActive(touch) && ui_.isKeyboardArea(x, y)) {
+      const int keyboard_note = static_cast<int>(std::lround(ui_.keyboardNoteValueAt(x, y)));
+      if (note_count < SynthConfig::ui.max_touch_points) {
+        note_values[note_count] = static_cast<float>(keyboard_note);
+        ++note_count;
+      }
+      if (keyboard_note_count < SynthConfig::ui.max_touch_points) {
+        keyboard_notes[keyboard_note_count] = keyboard_note;
+        ++keyboard_note_count;
+      }
     }
   }
 
-  if (perf_count > 0) {
-    handlePerformanceTouches(perf_xs, perf_ys, perf_count);
-  } else if (audio_engine_.isNotePlaying() || ui_state_.touch_count > 0) {
+  if (note_count > 0) {
+    handlePerformanceTouches(note_values, note_count, pad_xs, pad_ys, pad_count, keyboard_notes, keyboard_note_count);
+  } else if (ui_state_.touch_count > 0 || ui_state_.keyboard_note_count > 0) {
     stopNote();
   }
 }
@@ -191,35 +214,47 @@ void SynthApp::handleSliderTouch(int x, int /*y*/) {
   last_ui_refresh_ms_ = millis();
 }
 
-void SynthApp::handlePerformanceTouches(const std::array<int, SynthConfig::ui.max_touch_points>& xs,
+void SynthApp::handlePerformanceTouches(const std::array<float, SynthConfig::ui.max_touch_points>& note_values,
+                                        std::size_t note_count,
+                                        const std::array<int, SynthConfig::ui.max_touch_points>& xs,
                                         const std::array<int, SynthConfig::ui.max_touch_points>& ys,
-                                        std::size_t count) {
-  std::array<float, SynthConfig::ui.max_touch_points> note_values{};
-  for (std::size_t i = 0; i < count; ++i) {
-    note_values[i] = ui_.xToNoteValue(xs[i], ui_state_.quantize_to_semitone);
-  }
-
-  bool marker_changed = count != last_drawn_touch_count_;
-  for (std::size_t i = 0; i < count && !marker_changed; ++i) {
+                                        std::size_t pad_count,
+                                        const std::array<int, SynthConfig::ui.max_touch_points>& keyboard_notes,
+                                        std::size_t keyboard_note_count) {
+  bool marker_changed = pad_count != last_drawn_touch_count_;
+  for (std::size_t i = 0; i < pad_count && !marker_changed; ++i) {
     marker_changed = touchMovedEnough(xs[i], ys[i], last_drawn_touch_xs_[i], last_drawn_touch_ys_[i]);
+  }
+  bool keyboard_changed = keyboard_note_count != last_drawn_keyboard_note_count_;
+  for (std::size_t i = 0; i < keyboard_note_count && !keyboard_changed; ++i) {
+    keyboard_changed = keyboard_notes[i] != last_drawn_keyboard_notes_[i];
   }
   const bool refresh_due = (millis() - last_ui_refresh_ms_) >= kUiRefreshIntervalMs;
 
-  audio_engine_.noteOnVoices(note_values.data(), count, ui_state_.selected_waveform);
-  ui_state_.touch_count = count;
+  audio_engine_.noteOnVoices(note_values.data(), note_count, ui_state_.selected_waveform);
+  ui_state_.touch_count = pad_count;
   ui_state_.touch_xs = xs;
   ui_state_.touch_ys = ys;
+  ui_state_.keyboard_note_count = keyboard_note_count;
+  ui_state_.keyboard_notes = keyboard_notes;
   syncUiState();
-  ui_state_.touch_count = count;
+  ui_state_.touch_count = pad_count;
   ui_state_.touch_xs = xs;
   ui_state_.touch_ys = ys;
+  ui_state_.keyboard_note_count = keyboard_note_count;
+  ui_state_.keyboard_notes = keyboard_notes;
 
   if (marker_changed || refresh_due) {
     ui_.refreshPerformance(ui_state_);
     last_ui_refresh_ms_ = millis();
-    last_drawn_touch_count_ = count;
+    last_drawn_touch_count_ = pad_count;
     last_drawn_touch_xs_ = xs;
     last_drawn_touch_ys_ = ys;
+  }
+  if (keyboard_changed) {
+    ui_.refreshKeyboard(ui_state_);
+    last_drawn_keyboard_note_count_ = keyboard_note_count;
+    last_drawn_keyboard_notes_ = keyboard_notes;
   }
 }
 
@@ -232,6 +267,7 @@ void SynthApp::finishMicRecording() {
   syncUiState();
   ui_.refreshSourceSelection(ui_state_);
   ui_.refreshPerformance(ui_state_);
+  ui_.refreshKeyboard(ui_state_);
   last_ui_refresh_ms_ = millis();
 }
 
@@ -260,10 +296,18 @@ void SynthApp::stopNote() {
   ui_state_.touch_count = 0;
   ui_state_.touch_xs.fill(0);
   ui_state_.touch_ys.fill(0);
+  ui_state_.keyboard_note_count = 0;
+  ui_state_.keyboard_notes.fill(0);
   syncUiState();
   ui_.refreshPerformance(ui_state_);
+  ui_.refreshKeyboard(ui_state_);
   last_ui_refresh_ms_ = millis();
   last_drawn_touch_count_ = 0;
   last_drawn_touch_xs_.fill(0);
   last_drawn_touch_ys_.fill(0);
+  last_drawn_keyboard_note_count_ = 0;
+  last_drawn_keyboard_notes_.fill(0);
 }
+
+
+

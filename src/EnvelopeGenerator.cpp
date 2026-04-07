@@ -33,7 +33,7 @@ void EnvelopeGenerator::noteOn() {
 }
 
 void EnvelopeGenerator::noteOff() {
-  if (stage_ == Stage::Idle) {
+  if (stage_ == Stage::Idle || stage_ == Stage::Release) {
     return;
   }
 
@@ -113,3 +113,4 @@ float EnvelopeGenerator::value() const {
 EnvelopeGenerator::Stage EnvelopeGenerator::stage() const {
   return stage_;
 }
+

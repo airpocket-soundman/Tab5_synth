@@ -38,6 +38,8 @@ struct UiState {
   std::size_t touch_count = 0;
   std::array<int, SynthConfig::ui.max_touch_points> touch_xs{};
   std::array<int, SynthConfig::ui.max_touch_points> touch_ys{};
+  std::size_t keyboard_note_count = 0;
+  std::array<int, SynthConfig::ui.max_touch_points> keyboard_notes{};
 };
 
 class PerformanceUi {
@@ -49,10 +51,12 @@ class PerformanceUi {
   void refreshParameterSelection(const UiState& state);
   void refreshParameterControl(const UiState& state);
   void refreshPitchMode(const UiState& state);
+  void refreshKeyboard(const UiState& state);
 
   [[nodiscard]] bool isSelectionArea(int x, int y) const;
   [[nodiscard]] bool isParameterArea(int x, int y) const;
   [[nodiscard]] bool isPerformanceArea(int x, int y) const;
+  [[nodiscard]] bool isKeyboardArea(int x, int y) const;
   [[nodiscard]] bool isSliderArea(int x, int y) const;
   [[nodiscard]] bool isPitchModeArea(int x, int y) const;
   [[nodiscard]] bool quantizeModeAt(int x, int y, bool fallback) const;
@@ -60,12 +64,15 @@ class PerformanceUi {
   [[nodiscard]] AudioSourceType sourceAt(int x, int y, AudioSourceType fallback) const;
   [[nodiscard]] UiParameter parameterAt(int x, int y, UiParameter fallback) const;
   [[nodiscard]] float xToNoteValue(int x, bool quantize_to_semitone) const;
+  [[nodiscard]] float keyboardNoteValueAt(int x, int y) const;
   [[nodiscard]] float sliderValueFromTouch(int x) const;
 
  private:
   [[nodiscard]] bool isSourceAvailable(AudioSourceType source, const UiState& state) const;
   [[nodiscard]] float parameterValue(const UiState& state, UiParameter parameter) const;
   [[nodiscard]] const char* parameterLabel(UiParameter parameter) const;
+  [[nodiscard]] bool isBlackKeySemitone(int semitone) const;
+  [[nodiscard]] bool hasKeyboardNote(const UiState& state, int note) const;
   void layout();
   void drawSourceButtons(const UiState& state);
   void drawSourceButton(std::size_t index, const UiState& state);
@@ -77,6 +84,11 @@ class PerformanceUi {
   void drawPitchModeSwitch(const UiState& state);
   void drawPitchModeButton(const Rect& rect, const char* label, bool selected);
   void drawPerformanceBase();
+  void drawKeyboardBase();
+  void drawKeyboardOverlays(const UiState& state);
+  void drawBlackKey(int octave, std::size_t black_index, bool active);
+  void redrawBlackKeys(const UiState& state);
+  void drawKeyboardNote(int note, bool active);
   void eraseTouchMarkers();
   void drawTouchMarkers(const UiState& state);
   void drawCenterGuides(const Rect& bounds);
@@ -87,6 +99,7 @@ class PerformanceUi {
   std::array<Rect, 5> parameter_buttons_{};
   Rect slider_area_{};
   Rect performance_area_{};
+  Rect keyboard_area_{};
   Rect pitch_mode_area_{};
   Rect semitone_button_{};
   Rect continuous_button_{};
@@ -94,4 +107,7 @@ class PerformanceUi {
   std::size_t previous_touch_count_ = 0;
   std::array<int, SynthConfig::ui.max_touch_points> previous_touch_xs_{};
   std::array<int, SynthConfig::ui.max_touch_points> previous_touch_ys_{};
+  std::size_t previous_keyboard_note_count_ = 0;
+  std::array<int, SynthConfig::ui.max_touch_points> previous_keyboard_notes_{};
 };
+

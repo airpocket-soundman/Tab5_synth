@@ -16,9 +16,13 @@ class SynthApp {
   void handleSelectionTouch(int x, int y);
   void handlePitchModeTouch(int x, int y);
   void handleSliderTouch(int x, int y);
-  void handlePerformanceTouches(const std::array<int, SynthConfig::ui.max_touch_points>& xs,
+  void handlePerformanceTouches(const std::array<float, SynthConfig::ui.max_touch_points>& note_values,
+                                std::size_t note_count,
+                                const std::array<int, SynthConfig::ui.max_touch_points>& xs,
                                 const std::array<int, SynthConfig::ui.max_touch_points>& ys,
-                                std::size_t count);
+                                std::size_t pad_count,
+                                const std::array<int, SynthConfig::ui.max_touch_points>& keyboard_notes,
+                                std::size_t keyboard_note_count);
   void finishMicRecording();
   void syncUiState();
   void stopNote();
@@ -32,4 +36,8 @@ class SynthApp {
   std::size_t last_drawn_touch_count_ = 0;
   std::array<int, SynthConfig::ui.max_touch_points> last_drawn_touch_xs_{};
   std::array<int, SynthConfig::ui.max_touch_points> last_drawn_touch_ys_{};
+  std::size_t last_drawn_keyboard_note_count_ = 0;
+  std::array<int, SynthConfig::ui.max_touch_points> last_drawn_keyboard_notes_{};
 };
+
+

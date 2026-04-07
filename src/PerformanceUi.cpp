@@ -16,6 +16,9 @@ constexpr std::array<UiParameter, 5> kUiParameters = {
     UiParameter::Sustain,
     UiParameter::Release,
 };
+constexpr std::array<int, 7> kWhiteSemitones = {0, 2, 4, 5, 7, 9, 11};
+constexpr std::array<int, 5> kBlackSemitones = {1, 3, 6, 8, 10};
+constexpr std::array<int, 5> kBlackWhiteSlot = {0, 1, 3, 4, 5};
 
 bool isWaveformIndex(std::size_t index) {
   return index < static_cast<std::size_t>(Waveform::Count);
@@ -44,6 +47,10 @@ void PerformanceUi::drawInitial(const UiState& state) {
   drawPerformanceBase();
   drawPitchModeSwitch(state);
   drawSliderControl(state);
+  drawKeyboardBase();
+  drawKeyboardOverlays(state);
+  previous_keyboard_note_count_ = state.keyboard_note_count;
+  previous_keyboard_notes_ = state.keyboard_notes;
   previous_touch_count_ = 0;
   previous_touch_xs_.fill(0);
   previous_touch_ys_.fill(0);
@@ -53,6 +60,44 @@ void PerformanceUi::drawInitial(const UiState& state) {
 void PerformanceUi::refreshPerformance(const UiState& state) {
   eraseTouchMarkers();
   drawTouchMarkers(state);
+}
+
+void PerformanceUi::refreshKeyboard(const UiState& state) {
+  bool white_key_changed = false;
+
+  for (std::size_t i = 0; i < previous_keyboard_note_count_; ++i) {
+    const int note = previous_keyboard_notes_[i];
+    if (!hasKeyboardNote(state, note)) {
+      drawKeyboardNote(note, false);
+      if (!isBlackKeySemitone(note - SynthConfig::ui.keyboard_root_note)) {
+        white_key_changed = true;
+      }
+    }
+  }
+
+  for (std::size_t i = 0; i < state.keyboard_note_count; ++i) {
+    const int note = state.keyboard_notes[i];
+    bool was_active = false;
+    for (std::size_t j = 0; j < previous_keyboard_note_count_; ++j) {
+      if (previous_keyboard_notes_[j] == note) {
+        was_active = true;
+        break;
+      }
+    }
+    if (!was_active) {
+      drawKeyboardNote(note, true);
+      if (!isBlackKeySemitone(note - SynthConfig::ui.keyboard_root_note)) {
+        white_key_changed = true;
+      }
+    }
+  }
+
+  if (white_key_changed) {
+    redrawBlackKeys(state);
+  }
+
+  previous_keyboard_note_count_ = state.keyboard_note_count;
+  previous_keyboard_notes_ = state.keyboard_notes;
 }
 
 void PerformanceUi::refreshSourceSelection(const UiState& state) {
@@ -92,6 +137,10 @@ bool PerformanceUi::isParameterArea(int x, int y) const {
 
 bool PerformanceUi::isPerformanceArea(int x, int y) const {
   return performance_area_.contains(x, y);
+}
+
+bool PerformanceUi::isKeyboardArea(int x, int y) const {
+  return keyboard_area_.contains(x, y);
 }
 
 bool PerformanceUi::isSliderArea(int x, int y) const {
@@ -151,6 +200,37 @@ float PerformanceUi::xToNoteValue(int x, bool quantize_to_semitone) const {
   return quantize_to_semitone ? std::round(note_value) : note_value;
 }
 
+float PerformanceUi::keyboardNoteValueAt(int x, int y) const {
+  const int octaves = std::max(1, SynthConfig::ui.keyboard_octaves);
+  const int total_white = octaves * 7 + 1;
+  const float white_w = static_cast<float>(keyboard_area_.w) / static_cast<float>(total_white);
+  const float black_w = white_w * SynthConfig::ui.keyboard_black_width_ratio;
+  const int black_h = static_cast<int>(std::round(keyboard_area_.h * SynthConfig::ui.keyboard_black_height_ratio));
+  const int local_x = x - keyboard_area_.x;
+  const int local_y = y - keyboard_area_.y;
+
+  if (local_y >= 0 && local_y < black_h) {
+    for (int octave = 0; octave < octaves; ++octave) {
+      for (std::size_t i = 0; i < kBlackSemitones.size(); ++i) {
+        const float center = (static_cast<float>(octave * 7 + kBlackWhiteSlot[i] + 1) * white_w);
+        const int left = static_cast<int>(std::round(center - (black_w * 0.5f)));
+        const int right = static_cast<int>(std::round(center + (black_w * 0.5f)));
+        if (local_x >= left && local_x < right) {
+          return static_cast<float>(SynthConfig::ui.keyboard_root_note + octave * 12 + kBlackSemitones[i]);
+        }
+      }
+    }
+  }
+
+  const int white_index = std::clamp(static_cast<int>(std::floor(local_x / std::max(1.0f, white_w))), 0, total_white - 1);
+  if (white_index == total_white - 1) {
+    return static_cast<float>(SynthConfig::ui.keyboard_root_note + octaves * 12);
+  }
+  const int octave = white_index / 7;
+  const int step = white_index % 7;
+  return static_cast<float>(SynthConfig::ui.keyboard_root_note + octave * 12 + kWhiteSemitones[step]);
+}
+
 float PerformanceUi::sliderValueFromTouch(int x) const {
   const int slider_left = slider_area_.x + SynthConfig::ui.slider_inset;
   const int slider_right = slider_area_.x + slider_area_.w - SynthConfig::ui.slider_inset;
@@ -206,6 +286,28 @@ const char* PerformanceUi::parameterLabel(UiParameter parameter) const {
   }
 }
 
+bool PerformanceUi::isBlackKeySemitone(int semitone) const {
+  switch (semitone % 12) {
+    case 1:
+    case 3:
+    case 6:
+    case 8:
+    case 10:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool PerformanceUi::hasKeyboardNote(const UiState& state, int note) const {
+  for (std::size_t i = 0; i < state.keyboard_note_count; ++i) {
+    if (state.keyboard_notes[i] == note) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void PerformanceUi::layout() {
   const int width = M5.Display.width();
   const int height = M5.Display.height();
@@ -243,7 +345,9 @@ void PerformanceUi::layout() {
   const int square_limit = std::min(right_zone_width - (SynthConfig::ui.wave_button_padding * 2),
                                     height - (SynthConfig::ui.wave_button_padding * 2) -
                                         (SynthConfig::ui.pitch_mode_height * 2) -
-                                        SynthConfig::ui.pitch_mode_gap * 2);
+                                        SynthConfig::ui.pitch_mode_gap * 2 -
+                                        SynthConfig::ui.keyboard_min_height - SynthConfig::ui.keyboard_top_gap -
+                                        SynthConfig::ui.keyboard_bottom_margin);
   const int square_size =
       std::max(180, static_cast<int>(std::round(square_limit * SynthConfig::ui.performance_square_scale)));
   const int square_x = right_zone_x + right_zone_width - square_size - SynthConfig::ui.wave_button_padding;
@@ -260,6 +364,15 @@ void PerformanceUi::layout() {
 
   const int slider_y = pitch_mode_area_.y + pitch_mode_area_.h + SynthConfig::ui.pitch_mode_gap;
   slider_area_ = {pitch_mode_area_.x, slider_y, pitch_mode_area_.w, SynthConfig::ui.pitch_mode_height};
+
+  const int keyboard_top = std::max(parameter_row_y + SynthConfig::ui.parameter_button_height + SynthConfig::ui.keyboard_top_gap,
+                                    slider_area_.y + slider_area_.h + SynthConfig::ui.keyboard_top_gap);
+  const int available_keyboard_height = std::max(0, height - keyboard_top - SynthConfig::ui.keyboard_bottom_margin);
+  const int keyboard_height = std::max(
+      SynthConfig::ui.keyboard_min_height,
+      static_cast<int>(std::round(available_keyboard_height * SynthConfig::ui.keyboard_height_scale)));
+  keyboard_area_ = {SynthConfig::ui.keyboard_side_margin, keyboard_top,
+                    width - (SynthConfig::ui.keyboard_side_margin * 2), keyboard_height};
 }
 
 void PerformanceUi::drawSourceButtons(const UiState& state) {
@@ -429,6 +542,112 @@ void PerformanceUi::drawPerformanceBase() {
   drawCenterGuides(performance_area_);
 }
 
+void PerformanceUi::drawKeyboardBase() {
+  M5.Display.fillRect(keyboard_area_.x, keyboard_area_.y, keyboard_area_.w, keyboard_area_.h,
+                      SynthConfig::ui.keyboard_white_color);
+  M5.Display.drawRect(keyboard_area_.x, keyboard_area_.y, keyboard_area_.w, keyboard_area_.h,
+                      SynthConfig::ui.keyboard_line_color);
+
+  const int octaves = std::max(1, SynthConfig::ui.keyboard_octaves);
+  const int total_white = octaves * 7 + 1;
+  const float white_w = static_cast<float>(keyboard_area_.w) / static_cast<float>(total_white);
+
+  for (int white_index = 0; white_index < total_white; ++white_index) {
+    const int x = keyboard_area_.x + static_cast<int>(std::round(white_index * white_w));
+    const int next_x = keyboard_area_.x + static_cast<int>(std::round((white_index + 1) * white_w));
+    M5.Display.fillRect(x, keyboard_area_.y, next_x - x, keyboard_area_.h, SynthConfig::ui.keyboard_white_color);
+    M5.Display.drawRect(x, keyboard_area_.y, next_x - x, keyboard_area_.h, SynthConfig::ui.keyboard_line_color);
+  }
+
+  UiState empty_state{};
+  redrawBlackKeys(empty_state);
+}
+
+void PerformanceUi::drawKeyboardOverlays(const UiState& state) {
+  for (std::size_t i = 0; i < state.keyboard_note_count; ++i) {
+    drawKeyboardNote(state.keyboard_notes[i], true);
+  }
+}
+
+void PerformanceUi::drawBlackKey(int octave, std::size_t black_index, bool active) {
+  const int total_white = std::max(1, SynthConfig::ui.keyboard_octaves) * 7 + 1;
+  const float white_w = static_cast<float>(keyboard_area_.w) / static_cast<float>(total_white);
+  const float black_w = white_w * SynthConfig::ui.keyboard_black_width_ratio;
+  const int black_h = static_cast<int>(std::round(keyboard_area_.h * SynthConfig::ui.keyboard_black_height_ratio));
+  const float center = keyboard_area_.x +
+                       (static_cast<float>(octave * 7 + kBlackWhiteSlot[black_index] + 1) * white_w);
+  const int left = static_cast<int>(std::round(center - (black_w * 0.5f)));
+  const int width = static_cast<int>(std::round(black_w));
+
+  M5.Display.fillRect(left, keyboard_area_.y, width, black_h,
+                      active ? SynthConfig::ui.selected_border_color : SynthConfig::ui.keyboard_black_color);
+  M5.Display.drawRect(left, keyboard_area_.y, width, black_h, SynthConfig::ui.keyboard_line_color);
+}
+
+void PerformanceUi::redrawBlackKeys(const UiState& state) {
+  const int octaves = std::max(1, SynthConfig::ui.keyboard_octaves);
+  for (int octave = 0; octave < octaves; ++octave) {
+    for (std::size_t i = 0; i < kBlackSemitones.size(); ++i) {
+      const int note = SynthConfig::ui.keyboard_root_note + octave * 12 + kBlackSemitones[i];
+      drawBlackKey(octave, i, hasKeyboardNote(state, note));
+    }
+  }
+}
+
+void PerformanceUi::drawKeyboardNote(int note, bool active) {
+  const int octaves = std::max(1, SynthConfig::ui.keyboard_octaves);
+  const int total_white = octaves * 7 + 1;
+  const float white_w = static_cast<float>(keyboard_area_.w) / static_cast<float>(total_white);
+  const int relative = note - SynthConfig::ui.keyboard_root_note;
+
+  if (relative < 0 || relative > octaves * 12) {
+    return;
+  }
+
+  if (relative == octaves * 12) {
+    const int white_index = total_white - 1;
+    const int x = keyboard_area_.x + static_cast<int>(std::round(white_index * white_w));
+    const int next_x = keyboard_area_.x + static_cast<int>(std::round((white_index + 1) * white_w));
+    M5.Display.fillRect(x, keyboard_area_.y, next_x - x, keyboard_area_.h,
+                        active ? SynthConfig::ui.slider_fill_color : SynthConfig::ui.keyboard_white_color);
+    M5.Display.drawRect(x, keyboard_area_.y, next_x - x, keyboard_area_.h, SynthConfig::ui.keyboard_line_color);
+    return;
+  }
+
+  const int octave = relative / 12;
+  const int semitone = relative % 12;
+
+  if (isBlackKeySemitone(semitone)) {
+    std::size_t black_index = 0;
+    for (; black_index < kBlackSemitones.size(); ++black_index) {
+      if (kBlackSemitones[black_index] == semitone) {
+        break;
+      }
+    }
+    if (black_index >= kBlackSemitones.size()) {
+      return;
+    }
+    drawBlackKey(octave, black_index, active);
+    return;
+  }
+
+  std::size_t white_step = 0;
+  for (; white_step < kWhiteSemitones.size(); ++white_step) {
+    if (kWhiteSemitones[white_step] == semitone) {
+      break;
+    }
+  }
+  if (white_step >= kWhiteSemitones.size()) {
+    return;
+  }
+  const int white_index = octave * 7 + static_cast<int>(white_step);
+  const int x = keyboard_area_.x + static_cast<int>(std::round(white_index * white_w));
+  const int next_x = keyboard_area_.x + static_cast<int>(std::round((white_index + 1) * white_w));
+  M5.Display.fillRect(x, keyboard_area_.y, next_x - x, keyboard_area_.h,
+                      active ? SynthConfig::ui.slider_fill_color : SynthConfig::ui.keyboard_white_color);
+  M5.Display.drawRect(x, keyboard_area_.y, next_x - x, keyboard_area_.h, SynthConfig::ui.keyboard_line_color);
+}
+
 void PerformanceUi::eraseTouchMarkers() {
   for (std::size_t i = 0; i < previous_touch_count_; ++i) {
     eraseMarkerAt(previous_touch_xs_[i], previous_touch_ys_[i]);
@@ -503,4 +722,3 @@ void PerformanceUi::drawMarkerAt(int x, int y, std::uint32_t fill) {
   M5.Display.fillCircle(draw_x, draw_y, SynthConfig::ui.marker_radius, fill);
   M5.Display.drawCircle(draw_x, draw_y, SynthConfig::ui.marker_radius, SynthConfig::ui.selected_border_color);
 }
-
