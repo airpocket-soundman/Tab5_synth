@@ -25,6 +25,8 @@ class AudioEngine {
   void setDecayNormalized(float normalized);
   void setSustainNormalized(float normalized);
   void setReleaseNormalized(float normalized);
+  void setDelayEnabled(bool enabled);
+  void setDelayParameters(float time_normalized, float feedback_normalized, float mix_normalized);
   bool beginMicSampleRecording();
   void updateMicSampleRecording();
   bool finishMicSampleRecording(bool commit_sample = true);
@@ -45,19 +47,51 @@ class AudioEngine {
   [[nodiscard]] float releaseNormalized() const;
   [[nodiscard]] AudioSourceType activeSourceType() const;
   [[nodiscard]] std::size_t activeVoiceCount() const;
+  [[nodiscard]] bool delayEnabled() const;
+  [[nodiscard]] float delayTimeNormalized() const;
+  [[nodiscard]] float delayFeedbackNormalized() const;
+  [[nodiscard]] float delayMixNormalized() const;
 
  private:
+  struct PendingDelayEvent {
+    bool active = false;
+    std::uint32_t fire_ms = 0;
+    AudioSourceType source_type = AudioSourceType::Oscillator;
+    float note_value = 0.0f;
+    float frequency = 0.0f;
+    Waveform waveform = Waveform::Sine;
+    float gain = 0.0f;
+    std::uint8_t repeats_left = 0;
+  };
+
+  struct PendingVoiceOff {
+    bool active = false;
+    std::uint32_t fire_ms = 0;
+    AudioSourceType source_type = AudioSourceType::Oscillator;
+    std::size_t voice_index = 0;
+  };
+
   static float noteValueToFrequency(float note_value);
   static float normalizedToMilliseconds(float normalized, float max_ms);
   static float millisecondsToNormalized(float value_ms, float max_ms);
   AudioSource& sourceFor(AudioSourceType source_type);
   const AudioSource& sourceFor(AudioSourceType source_type) const;
+  void applyVoiceLevel(std::size_t voice_index, float envelope_value, Waveform waveform);
+  void resetVoice(std::size_t voice_index);
+  std::size_t pickVoiceForEcho() const;
+  void enqueueDelayEvent(float note_value, float frequency, Waveform waveform, std::uint32_t now_ms);
+  void processDelayEvents(std::uint32_t now_ms);
+  void triggerDelayEvent(const PendingDelayEvent& event, std::uint32_t now_ms);
+  void scheduleVoiceOff(std::size_t voice_index, std::uint32_t fire_ms);
+  void clearPendingVoiceOff(std::size_t voice_index);
   void applyEnvelopeSettings();
   void stopAllImmediately();
   void clearVoices();
 
   std::array<bool, SynthConfig::audio.polyphony_voices> voice_active_{};
   std::array<bool, SynthConfig::audio.polyphony_voices> voice_held_{};
+  std::array<float, SynthConfig::audio.polyphony_voices> voice_gain_{};
+  std::array<bool, SynthConfig::audio.polyphony_voices> voice_is_delay_{};
   std::array<int, SynthConfig::audio.polyphony_voices> active_midi_notes_{};
   std::array<float, SynthConfig::audio.polyphony_voices> active_note_values_{};
   std::array<float, SynthConfig::audio.polyphony_voices> active_frequencies_{};
@@ -73,4 +107,10 @@ class AudioEngine {
   OscillatorSource oscillator_source_{};
   OnboardMicSource onboard_mic_source_{};
   ExternalI2SSource external_i2s_source_{};
+  bool delay_enabled_ = true;
+  float delay_time_normalized_ = 0.35f;
+  float delay_feedback_normalized_ = 0.40f;
+  float delay_mix_normalized_ = 0.30f;
+  std::array<PendingDelayEvent, SynthConfig::audio.polyphony_voices * 4> pending_delay_events_{};
+  std::array<PendingVoiceOff, SynthConfig::audio.polyphony_voices * 2> pending_voice_off_{};
 };

@@ -513,3 +513,148 @@ VCO ソースごとの想定:
 - `AudioEngine` は各ボイスごとに ADSR を持ち、音量へ適用する構成へ変更した
 - `MIC` 録音は押している間だけ行い、1 秒未満なら前回サンプルを保持する仕様にした
 - タッチパッドの丸マーカー消去時に外枠と中央ガイドを再描画するように修正した
+
+## LFO モジュレーションマトリクス（案）
+
+### LFO 側パラメータ
+
+本プロジェクトで扱う LFO パラメータは以下の 3 つです。
+
+- `Rate`: 揺れの速さ
+- `Depth`: 揺れの深さ（変調量）
+- `Shape`: 揺れ方の形（sine / triangle / square / sample-hold など）
+
+### 対象パラメータ一覧と意味
+
+#### A. 現在コード上に存在するパラメータ（UI/state 実装済み）
+
+| カテゴリ | パラメータ | 意味 |
+|---|---|---|
+| AMP | Volume | 音量（最終出力レベル） |
+| AMP EG | Attack | ノートオンから最大音量までの立ち上がり時間 |
+| AMP EG | Decay | 最大音量からサステインレベルまで下がる時間 |
+| AMP EG | Sustain | キー押下中に維持する音量 |
+| AMP EG | Release | ノートオフから無音になるまでの時間 |
+| Delay | Delay Time | ディレイの遅延時間 |
+| Delay | Delay Feedback | 反復量（残響の繰り返しの強さ） |
+| Delay | Delay Mix | Dry/Wet バランス |
+| Chorus | Chorus Rate | コーラス揺れの速さ |
+| Chorus | Chorus Depth | コーラス揺れの深さ |
+| Chorus | Chorus Mix | Dry/Wet バランス |
+| Filter | Filter Cutoff | フィルタのカットオフ周波数 |
+| Filter | Filter Resonance | カットオフ近傍の強調量（Q） |
+| Filter | Filter Mix | フィルタ処理の混合量 |
+
+#### B. 潜在的な対象（未実装）
+
+| カテゴリ | パラメータ | 意味 |
+|---|---|---|
+| OSC | Pitch | 基本ピッチ（浅くかけるとビブラート） |
+| OSC | Fine Tune | ピッチ微調整 |
+| OSC | Portamento Time | ノート間スライド時間 |
+| OSC | PWM Duty | パルス波デューティ比 |
+| OSC | Wave Morph | 波形間の連続モーフィング量 |
+| Mix | Pan | ステレオ定位 |
+| AMP | Tremolo Depth | 音量揺れ（AM）の深さ |
+| Filter | Filter Drive | フィルタ入力のドライブ量 |
+| FX Router | Effect On/Off | エフェクトブロックのオンオフ制御 |
+| Delay | Delay Time Sync | テンポ同期倍率 |
+| Chorus | Chorus Phase/Delay | コーラス内部位相差 / プリディレイ |
+| Mod | LFO Amount (per route) | ルーティングごとの変調量 |
+| Mod | LFO Rate (meta) | LFO 速度そのものの変調 |
+| Mod | LFO Shape (meta) | LFO 波形形状そのものの変調 |
+
+### 対象ごとの LFO パラメータ有効性
+
+基本方針:
+
+- 連続量パラメータは `Rate / Depth / Shape` の 3 つすべてが有効。
+- On/Off のような二値対象は、主に `Rate` と `Shape` が有効。`Depth` はしきい値やスイング量として使う場合のみ有効。
+- メタ変調（`LFO Rate` や `LFO Shape`）は、2 系統目の変調源や拡張アーキテクチャがある場合に有効。
+
+| 対象パラメータ | Rate | Depth | Shape | 有効パラメータ数 | 補足 |
+|---|---|---|---|---|---|
+| Volume | Y | Y | Y | 3 | トレモロ的な制御 |
+| Attack | Y | Y | Y | 3 | エンベロープ速度の周期変化 |
+| Decay | Y | Y | Y | 3 | エンベロープ速度の周期変化 |
+| Sustain | Y | Y | Y | 3 | サステインレベル変化 |
+| Release | Y | Y | Y | 3 | リリース時間の周期変化 |
+| Delay Time | Y | Y | Y | 3 | ピッチ感を伴う時間揺れ |
+| Delay Feedback | Y | Y | Y | 3 | 反復量の変化 |
+| Delay Mix | Y | Y | Y | 3 | Wet 量の変化 |
+| Chorus Rate | Y | Y | Y | 3 | コーラス速度の変化 |
+| Chorus Depth | Y | Y | Y | 3 | コーラス深さの変化 |
+| Chorus Mix | Y | Y | Y | 3 | Wet 量の変化 |
+| Filter Cutoff | Y | Y | Y | 3 | 定番のフィルタLFO |
+| Filter Resonance | Y | Y | Y | 3 | レゾナンスの動的変化 |
+| Filter Mix | Y | Y | Y | 3 | ブレンド量の変化 |
+| Pitch | Y | Y | Y | 3 | ビブラート / 階段状ピッチ変調 |
+| Fine Tune | Y | Y | Y | 3 | 微細なビブラート |
+| Portamento Time | Y | Y | Y | 3 | グライド時間の変化 |
+| PWM Duty | Y | Y | Y | 3 | PWM 変調 |
+| Wave Morph | Y | Y | Y | 3 | 音色モーフィング |
+| Pan | Y | Y | Y | 3 | オートパン |
+| Tremolo Depth | Y | Y | Y | 3 | トレモロ強度の変化 |
+| Filter Drive | Y | Y | Y | 3 | 歪み量の動的変化 |
+| Effect On/Off | Y | (Y) | Y | 2-3 | Depth はしきい値制御時のみ有効 |
+| Delay Time Sync | Y | Y | Y | 3 | リズム同期揺れ |
+| Chorus Phase/Delay | Y | Y | Y | 3 | 位相/遅延の変化 |
+| LFO Amount (per route) | Y | Y | Y | 3 | 変調量そのものの変化 |
+| LFO Rate (meta) | (Y) | (Y) | (Y) | 0-3 | 2 系統目の変調源が必要 |
+| LFO Shape (meta) | (Y) | (Y) | (Y) | 0-3 | 波形モーフ機構が必要 |
+
+凡例:
+
+- `Y`: 単一 LFO 設計でも直接意味がある
+- `(Y)`: アーキテクチャ次第で有効
+
+実装上の注記（現状）:
+
+- UI/state 側には LFO 関連の表示・選択状態があります。
+- ただし DSP 側のモジュレーション行列（実際に音へ反映する経路）は未接続または未完成です。
+
+## 実装ギャップメモ（2026-04-10）
+
+### UI未実装モジュール（優先順）
+- 複数LFOの同時管理UI（現状は1系統の編集UI）
+- LFOルーティングマトリクスUI（送信元LFOと送信先パラメータの接続編集）
+- 拡張モジュレーション対象UI（Pitch/Fine/PWM/Pan等）
+- エフェクト処理順の並び替えUI（DLY/CHR/FLTの順序変更）
+- MIC/I2S詳細設定UI（入力レベル・同期・ルーティング）
+
+### 実装計画（短期）
+1. 既存UIの安定化と保存系の回帰テスト（現在のLFO/FX/スロット）
+2. Delayのみ先行実装して、パラメータ配線と体感遅延を検証
+3. Chorus/FilterはDelayと同じ実装パターンで段階追加
+4. 複数LFO化とルーティングマトリクスを最後に追加
+
+### Delayテスト実装の方針
+- まずはイベント駆動の簡易エコーとして実装する
+- 反映対象: Delay On/Off, Time, Feedback, Mix
+- 目的: UIパラメータ->音声処理経路の接続確認と、演奏時の体感評価
+- 留意: 本格DSP版（サンプル単位バッファ処理）は次フェーズ
+
+## 進捗メモ（2026-04-10 追記）
+
+### UI
+- LFOラベルをターゲットパラメータ別の On/Off スイッチとして実装
+- LFOターゲット切替時に、ターゲットごとの LFO On/Off 状態を反映
+- 鍵盤エリアをメモリスロット直下から下端まで拡張
+
+### 保存機能
+- パラメータ保存を 5 スロット化（M1-M5）
+- LFOターゲット別パラメータ（Rate/Depth/Shape/Enabled）をスロット保存対象に追加
+
+### オーディオ（テスト実装）
+- Delay を先行実装（イベント駆動の簡易エコー）
+- 反映対象: Delay On/Off, Time, Feedback, Mix
+- FBK の最大反復回数を 16 回に拡張
+
+### ビルド確認
+- 変更ごとに `platformio run -v` でビルド成功を確認
+- 既知の framework 警告（`periph_ctrl.h`）は継続
+
+### 次の候補
+- Chorus / Filter の実DSP反映
+- 複数LFO UI とルーティングマトリクス UI
+- Delay を本格DSP（バッファ処理）へ置換

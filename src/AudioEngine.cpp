@@ -8,6 +8,10 @@
 namespace {
 constexpr float kPitchRetuneThresholdSemitone = 0.25f;
 constexpr std::uint32_t kMinRetuneIntervalMs = 24;
+constexpr float kDelayMinMs = 40.0f;
+constexpr float kDelayMaxMs = 700.0f;
+constexpr std::uint32_t kEchoGateMinMs = 18;
+constexpr float kMinDelayGain = 0.015f;
 }
 
 void AudioEngine::begin() {
@@ -42,18 +46,14 @@ void AudioEngine::update() {
     if (!envelopes_[i].isActive()) {
       source.setVoiceLevel(i, 0.0f, active_waveform_);
       source.noteOff(i);
-      voice_active_[i] = false;
-      voice_held_[i] = false;
-      active_midi_notes_[i] = -1;
-      active_note_values_[i] = 0.0f;
-      active_frequencies_[i] = 0.0f;
-      last_retrigger_ms_[i] = 0;
-      voice_started_order_[i] = 0;
+      resetVoice(i);
       continue;
     }
 
-    source.setVoiceLevel(i, volume_ * env, active_waveform_);
+    applyVoiceLevel(i, env, active_waveform_);
   }
+
+  processDelayEvents(now);
 }
 
 void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Waveform waveform) {
@@ -104,6 +104,8 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
     }
     voice_active_[0] = true;
     voice_held_[0] = true;
+    voice_gain_[0] = 1.0f;
+    voice_is_delay_[0] = false;
     active_midi_notes_[0] = requested_midi_notes[0];
     active_note_values_[0] = requested_note_values[0];
     active_frequencies_[0] = frequency;
@@ -229,13 +231,7 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
     // For glide / repeated taps: update pitch without envelope reset to avoid clicks.
     if ((note_changed && retune_interval_elapsed) || waveform_changed) {
       if (!source.noteOn(voice_index, note_value, frequency, waveform)) {
-        voice_active_[voice_index] = false;
-        voice_held_[voice_index] = false;
-        active_midi_notes_[voice_index] = -1;
-        active_note_values_[voice_index] = 0.0f;
-        active_frequencies_[voice_index] = 0.0f;
-        last_retrigger_ms_[voice_index] = 0;
-        voice_started_order_[voice_index] = 0;
+        resetVoice(voice_index);
         envelopes_[voice_index].reset();
         continue;
       }
@@ -244,6 +240,8 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
 
     voice_active_[voice_index] = true;
     voice_held_[voice_index] = true;
+    voice_gain_[voice_index] = 1.0f;
+    voice_is_delay_[voice_index] = false;
     active_midi_notes_[voice_index] = requested_midi_notes[j];
     active_note_values_[voice_index] = note_value;
     active_frequencies_[voice_index] = frequency;
@@ -255,30 +253,28 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
     }
     const std::size_t voice_index = pick_voice_for_new_note(requested_midi_notes[j]);
     source.setVoiceLevel(voice_index, 0.0f, waveform);
+    clearPendingVoiceOff(voice_index);
 
     const float note_value = requested_note_values[j];
     const float frequency = noteValueToFrequency(note_value);
     envelopes_[voice_index].reset();
     envelopes_[voice_index].noteOn();
     if (!source.noteOn(voice_index, note_value, frequency, waveform)) {
-      voice_active_[voice_index] = false;
-      voice_held_[voice_index] = false;
-      active_midi_notes_[voice_index] = -1;
-      active_note_values_[voice_index] = 0.0f;
-      active_frequencies_[voice_index] = 0.0f;
-      last_retrigger_ms_[voice_index] = 0;
-      voice_started_order_[voice_index] = 0;
+      resetVoice(voice_index);
       envelopes_[voice_index].reset();
       continue;
     }
 
     voice_active_[voice_index] = true;
     voice_held_[voice_index] = true;
+    voice_gain_[voice_index] = 1.0f;
+    voice_is_delay_[voice_index] = false;
     active_midi_notes_[voice_index] = requested_midi_notes[j];
     active_note_values_[voice_index] = note_value;
     active_frequencies_[voice_index] = frequency;
     last_retrigger_ms_[voice_index] = millis();
     voice_started_order_[voice_index] = next_voice_order_++;
+    enqueueDelayEvent(note_value, frequency, waveform, millis());
   }
 
   active_waveform_ = waveform;
@@ -327,6 +323,16 @@ void AudioEngine::setSustainNormalized(float normalized) {
 void AudioEngine::setReleaseNormalized(float normalized) {
   amp_envelope_.release_seconds = normalizedToMilliseconds(normalized, SynthConfig::audio.amp_release_max_ms) / 1000.0f;
   applyEnvelopeSettings();
+}
+
+void AudioEngine::setDelayEnabled(bool enabled) {
+  delay_enabled_ = enabled;
+}
+
+void AudioEngine::setDelayParameters(float time_normalized, float feedback_normalized, float mix_normalized) {
+  delay_time_normalized_ = std::clamp(time_normalized, 0.0f, 1.0f);
+  delay_feedback_normalized_ = std::clamp(feedback_normalized, 0.0f, 1.0f);
+  delay_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
 }
 
 bool AudioEngine::beginMicSampleRecording() {
@@ -435,6 +441,22 @@ std::size_t AudioEngine::activeVoiceCount() const {
   return count;
 }
 
+bool AudioEngine::delayEnabled() const {
+  return delay_enabled_;
+}
+
+float AudioEngine::delayTimeNormalized() const {
+  return delay_time_normalized_;
+}
+
+float AudioEngine::delayFeedbackNormalized() const {
+  return delay_feedback_normalized_;
+}
+
+float AudioEngine::delayMixNormalized() const {
+  return delay_mix_normalized_;
+}
+
 float AudioEngine::noteValueToFrequency(float note_value) {
   return 440.0f * std::pow(2.0f, (note_value - 69.0f) / 12.0f);
 }
@@ -482,6 +504,181 @@ void AudioEngine::applyEnvelopeSettings() {
   }
 }
 
+void AudioEngine::applyVoiceLevel(std::size_t voice_index, float envelope_value, Waveform waveform) {
+  const float gain = std::clamp(voice_gain_[voice_index], 0.0f, 1.0f);
+  sourceFor(active_source_type_).setVoiceLevel(voice_index, volume_ * envelope_value * gain, waveform);
+}
+
+void AudioEngine::resetVoice(std::size_t voice_index) {
+  clearPendingVoiceOff(voice_index);
+  voice_active_[voice_index] = false;
+  voice_held_[voice_index] = false;
+  voice_gain_[voice_index] = 1.0f;
+  voice_is_delay_[voice_index] = false;
+  active_midi_notes_[voice_index] = -1;
+  active_note_values_[voice_index] = 0.0f;
+  active_frequencies_[voice_index] = 0.0f;
+  last_retrigger_ms_[voice_index] = 0;
+  voice_started_order_[voice_index] = 0;
+}
+
+std::size_t AudioEngine::pickVoiceForEcho() const {
+  constexpr std::size_t npos = static_cast<std::size_t>(-1);
+  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+    if (!voice_active_[i]) {
+      return i;
+    }
+  }
+  std::size_t oldest_release = npos;
+  std::uint32_t oldest_release_order = UINT32_MAX;
+  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+    if (voice_active_[i] && !voice_held_[i] && voice_started_order_[i] < oldest_release_order) {
+      oldest_release_order = voice_started_order_[i];
+      oldest_release = i;
+    }
+  }
+  return oldest_release;
+}
+
+void AudioEngine::enqueueDelayEvent(float note_value, float frequency, Waveform waveform, std::uint32_t now_ms) {
+  if (!delay_enabled_ || delay_mix_normalized_ <= 0.0f) {
+    return;
+  }
+  const float delay_ms_f = kDelayMinMs + (kDelayMaxMs - kDelayMinMs) * delay_time_normalized_;
+  const auto delay_ms = static_cast<std::uint32_t>(std::lround(delay_ms_f));
+  const std::uint8_t repeats = static_cast<std::uint8_t>(1 + static_cast<int>(std::lround(delay_feedback_normalized_ * 15.0f)));
+  const float gain = std::clamp(delay_mix_normalized_ * 0.85f, 0.0f, 1.0f);
+  if (gain < kMinDelayGain || repeats == 0) {
+    return;
+  }
+  for (auto& event : pending_delay_events_) {
+    if (event.active) {
+      continue;
+    }
+    event.active = true;
+    event.fire_ms = now_ms + delay_ms;
+    event.source_type = active_source_type_;
+    event.note_value = note_value;
+    event.frequency = frequency;
+    event.waveform = waveform;
+    event.gain = gain;
+    event.repeats_left = repeats;
+    return;
+  }
+}
+
+void AudioEngine::processDelayEvents(std::uint32_t now_ms) {
+  for (auto& entry : pending_voice_off_) {
+    if (!entry.active) {
+      continue;
+    }
+    if (static_cast<std::int32_t>(now_ms - entry.fire_ms) < 0) {
+      continue;
+    }
+    entry.active = false;
+    if (entry.source_type != active_source_type_ || entry.voice_index >= SynthConfig::audio.polyphony_voices ||
+        !voice_active_[entry.voice_index]) {
+      continue;
+    }
+    voice_held_[entry.voice_index] = false;
+    envelopes_[entry.voice_index].noteOff();
+  }
+
+  for (auto& event : pending_delay_events_) {
+    if (!event.active) {
+      continue;
+    }
+    if (static_cast<std::int32_t>(now_ms - event.fire_ms) < 0) {
+      continue;
+    }
+    const PendingDelayEvent fired = event;
+    event.active = false;
+    if (!delay_enabled_ || fired.source_type != active_source_type_) {
+      continue;
+    }
+    triggerDelayEvent(fired, now_ms);
+  }
+}
+
+void AudioEngine::triggerDelayEvent(const PendingDelayEvent& event, std::uint32_t now_ms) {
+  AudioSource& source = sourceFor(event.source_type);
+  if (!source.isAvailable()) {
+    return;
+  }
+
+  const std::size_t voice_index = pickVoiceForEcho();
+  if (voice_index >= SynthConfig::audio.polyphony_voices) {
+    return;
+  }
+
+  if (voice_active_[voice_index]) {
+    source.noteOff(voice_index);
+    resetVoice(voice_index);
+  }
+
+  envelopes_[voice_index].reset();
+  envelopes_[voice_index].noteOn();
+  if (!source.noteOn(voice_index, event.note_value, event.frequency, event.waveform)) {
+    resetVoice(voice_index);
+    return;
+  }
+
+  const int midi_note = static_cast<int>(std::lround(event.note_value));
+  voice_active_[voice_index] = true;
+  voice_held_[voice_index] = true;
+  voice_gain_[voice_index] = std::clamp(event.gain, 0.0f, 1.0f);
+  voice_is_delay_[voice_index] = true;
+  active_midi_notes_[voice_index] = midi_note;
+  active_note_values_[voice_index] = event.note_value;
+  active_frequencies_[voice_index] = event.frequency;
+  last_retrigger_ms_[voice_index] = now_ms;
+  voice_started_order_[voice_index] = next_voice_order_++;
+
+  const float delay_ms_f = kDelayMinMs + (kDelayMaxMs - kDelayMinMs) * delay_time_normalized_;
+  const std::uint32_t delay_ms = static_cast<std::uint32_t>(std::lround(delay_ms_f));
+  const std::uint32_t gate_ms = std::max<std::uint32_t>(kEchoGateMinMs, delay_ms / 2);
+  scheduleVoiceOff(voice_index, now_ms + gate_ms);
+
+  if (event.repeats_left > 1) {
+    const float next_gain = std::clamp(event.gain * delay_feedback_normalized_, 0.0f, 1.0f);
+    if (next_gain >= kMinDelayGain) {
+      PendingDelayEvent chained = event;
+      chained.fire_ms = now_ms + delay_ms;
+      chained.gain = next_gain;
+      chained.repeats_left = static_cast<std::uint8_t>(event.repeats_left - 1);
+      for (auto& slot : pending_delay_events_) {
+        if (!slot.active) {
+          slot = chained;
+          slot.active = true;
+          break;
+        }
+      }
+    }
+  }
+}
+
+void AudioEngine::scheduleVoiceOff(std::size_t voice_index, std::uint32_t fire_ms) {
+  clearPendingVoiceOff(voice_index);
+  for (auto& slot : pending_voice_off_) {
+    if (slot.active) {
+      continue;
+    }
+    slot.active = true;
+    slot.fire_ms = fire_ms;
+    slot.source_type = active_source_type_;
+    slot.voice_index = voice_index;
+    return;
+  }
+}
+
+void AudioEngine::clearPendingVoiceOff(std::size_t voice_index) {
+  for (auto& slot : pending_voice_off_) {
+    if (slot.active && slot.voice_index == voice_index) {
+      slot.active = false;
+    }
+  }
+}
+
 void AudioEngine::stopAllImmediately() {
   sourceFor(active_source_type_).noteOffAll();
   clearVoices();
@@ -490,11 +687,19 @@ void AudioEngine::stopAllImmediately() {
 void AudioEngine::clearVoices() {
   voice_active_.fill(false);
   voice_held_.fill(false);
+  voice_gain_.fill(1.0f);
+  voice_is_delay_.fill(false);
   active_midi_notes_.fill(-1);
   active_note_values_.fill(0.0f);
   active_frequencies_.fill(0.0f);
   last_retrigger_ms_.fill(0);
   voice_started_order_.fill(0);
+  for (auto& event : pending_delay_events_) {
+    event.active = false;
+  }
+  for (auto& event : pending_voice_off_) {
+    event.active = false;
+  }
   next_voice_order_ = 1;
   for (auto& envelope : envelopes_) {
     envelope.reset();
