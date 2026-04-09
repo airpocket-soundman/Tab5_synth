@@ -1,5 +1,7 @@
 #include "ParameterIcon.h"
 
+#include "SynthConfig.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -10,8 +12,6 @@ constexpr std::uint32_t kActiveFillColor = 0x4CC9F0;
 constexpr std::uint32_t kInactiveFillColor = 0x16232C;
 constexpr std::uint32_t kActiveTextColor = 0xDDF8FF;
 constexpr std::uint32_t kInactiveTextColor = 0x697581;
-constexpr std::uint32_t kBorderColor = 0xF4F4F4;
-constexpr int kBorderRadius = 12;
 constexpr int kBorderInset = 1;
 
 }
@@ -29,6 +29,7 @@ void ParameterIcon::drawBar(const char* label, float value, bool selected) {
   }
 
   const float clamped = std::clamp(value, 0.0f, 1.0f);
+  const int border_radius = SynthConfig::ui.round_radius;
   const int inner_w = std::max(0, bounds_.w - (kBorderInset * 2));
   const int inner_h = std::max(0, bounds_.h - (kBorderInset * 2));
   const int active_height = static_cast<int>(std::round(inner_h * clamped));
@@ -37,11 +38,13 @@ void ParameterIcon::drawBar(const char* label, float value, bool selected) {
   sprite_.fillScreen(kBackgroundColor);
   if (active_height > 0 && inner_w > 0 && inner_h > 0) {
     const int fill_y = bounds_.h - kBorderInset - active_height;
-    const int fill_radius = std::max(1, std::min(kBorderRadius - 2, active_height / 2));
+    const int fill_radius = std::max(1, std::min(border_radius - 2, active_height / 2));
     sprite_.fillRoundRect(kBorderInset, fill_y, inner_w, active_height, fill_radius, fill_color);
   }
 
-  sprite_.drawRoundRect(0, 0, bounds_.w, bounds_.h, kBorderRadius, kBorderColor);
+  const std::uint32_t border_color = selected ? SynthConfig::ui.selected_border_color : SynthConfig::ui.panel_border_color;
+  sprite_.drawRoundRect(0, 0, bounds_.w, bounds_.h, border_radius, border_color);
+  sprite_.drawRoundRect(1, 1, std::max(0, bounds_.w - 2), std::max(0, bounds_.h - 2), border_radius, border_color);
   sprite_.setTextDatum(middle_center);
   sprite_.setTextColor(selected ? kActiveTextColor : kInactiveTextColor, kBackgroundColor);
   sprite_.setTextSize(2);

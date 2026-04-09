@@ -329,17 +329,20 @@ void PerformanceUi::layout() {
 
   const int parameter_row_y = SynthConfig::ui.wave_button_padding + SynthConfig::ui.selection_button_height +
                               SynthConfig::ui.parameter_button_gap;
-  const int parameter_button_width =
-      (left_width - (SynthConfig::ui.wave_button_padding * 2) -
-       (SynthConfig::ui.parameter_button_gap * (static_cast<int>(parameter_buttons_.size()) - 1))) /
-      static_cast<int>(parameter_buttons_.size());
+  // Keep EG parameter icon width aligned with the VCO/source button width.
+  const int parameter_button_width = source_button_width;
+  const int parameter_row_x = SynthConfig::ui.wave_button_padding;
 
   for (std::size_t i = 0; i < parameter_buttons_.size(); ++i) {
-    const int x = SynthConfig::ui.wave_button_padding +
+    const int x = parameter_row_x +
                   static_cast<int>(i) * (parameter_button_width + SynthConfig::ui.parameter_button_gap);
     parameter_buttons_[i] = {x, parameter_row_y, parameter_button_width, SynthConfig::ui.parameter_button_height};
     parameter_icons_[i].begin(parameter_buttons_[i]);
   }
+  const int preview_x = parameter_row_x +
+                        static_cast<int>(parameter_buttons_.size()) *
+                            (parameter_button_width + SynthConfig::ui.parameter_button_gap);
+  envelope_preview_area_ = {preview_x, parameter_row_y, parameter_button_width, SynthConfig::ui.parameter_button_height};
 
   const int right_zone_x = left_width;
   const int square_limit = std::min(right_zone_width - (SynthConfig::ui.wave_button_padding * 2),
@@ -417,12 +420,65 @@ void PerformanceUi::drawParameterButtons(const UiState& state) {
   for (std::size_t i = 0; i < parameter_buttons_.size(); ++i) {
     drawParameterButton(i, state);
   }
+  drawEnvelopePreview(state);
 }
 
 void PerformanceUi::drawParameterButton(std::size_t index, const UiState& state) {
   const UiParameter parameter = kUiParameters[index];
   parameter_icons_[index].drawBar(parameterLabel(parameter), parameterValue(state, parameter),
                                   state.selected_parameter == parameter);
+}
+
+void PerformanceUi::drawEnvelopePreview(const UiState& state) {
+  const auto& rect = envelope_preview_area_;
+  if (rect.w <= 0 || rect.h <= 0) {
+    return;
+  }
+
+  M5.Display.fillRoundRect(rect.x, rect.y, rect.w, rect.h, SynthConfig::ui.round_radius, SynthConfig::ui.muted_button_color);
+  M5.Display.drawRoundRect(rect.x, rect.y, rect.w, rect.h, SynthConfig::ui.round_radius, SynthConfig::ui.muted_border_color);
+  M5.Display.drawRoundRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, SynthConfig::ui.round_radius,
+                           SynthConfig::ui.muted_border_color);
+
+  const int graph_x = rect.x + 8;
+  const int graph_y = rect.y + 10;
+  const int graph_w = std::max(16, rect.w - 16);
+  const int graph_h = std::max(16, rect.h - 20);
+  const int bottom = graph_y + graph_h - 1;
+  const int top = graph_y + 2;
+
+  const float attack = std::clamp(state.attack, 0.0f, 1.0f);
+  const float decay = std::clamp(state.decay, 0.0f, 1.0f);
+  const float sustain = std::clamp(state.sustain, 0.0f, 1.0f);
+  const float release = std::clamp(state.release, 0.0f, 1.0f);
+  constexpr float kHold = 0.35f;
+  constexpr float kMinSegment = 0.05f;
+  const float total = std::max(0.0001f, attack + decay + release + kHold);
+
+  const int x0 = graph_x + 1;
+  const int x4 = graph_x + graph_w - 2;
+  const auto segment_to_x = [&](float start, float span) {
+    const float normalized = std::clamp((start + span) / total, 0.0f, 1.0f);
+    return x0 + static_cast<int>(std::round((x4 - x0) * normalized));
+  };
+
+  const float a_span = std::max(kMinSegment, attack);
+  const float d_span = std::max(kMinSegment, decay);
+  const float s_span = std::max(kMinSegment, kHold);
+
+  const int x1 = segment_to_x(0.0f, a_span);
+  const int x2 = segment_to_x(a_span, d_span);
+  const int x3 = segment_to_x(a_span + d_span, s_span);
+
+  const int y0 = bottom;
+  const int y1 = top;
+  const int ys = bottom - static_cast<int>(std::round((bottom - top) * sustain));
+
+  const std::uint32_t env_color = SynthConfig::ui.slider_fill_color;
+  M5.Display.drawLine(x0, y0, x1, y1, env_color);
+  M5.Display.drawLine(x1, y1, x2, ys, env_color);
+  M5.Display.drawLine(x2, ys, x3, ys, env_color);
+  M5.Display.drawLine(x3, ys, x4, y0, env_color);
 }
 
 void PerformanceUi::drawWaveformIcon(const Rect& rect, Waveform waveform, std::uint32_t color) {

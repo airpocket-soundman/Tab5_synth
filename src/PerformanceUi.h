@@ -78,6 +78,7 @@ class PerformanceUi {
   void drawSourceButton(std::size_t index, const UiState& state);
   void drawParameterButtons(const UiState& state);
   void drawParameterButton(std::size_t index, const UiState& state);
+  void drawEnvelopePreview(const UiState& state);
   void drawWaveformIcon(const Rect& rect, Waveform waveform, std::uint32_t color);
   void drawSourceLabel(const Rect& rect, AudioSourceType source, std::uint32_t color);
   void drawSliderControl(const UiState& state);
@@ -97,6 +98,7 @@ class PerformanceUi {
 
   std::array<Rect, 6> source_buttons_{};
   std::array<Rect, 5> parameter_buttons_{};
+  Rect envelope_preview_area_{};
   Rect slider_area_{};
   Rect performance_area_{};
   Rect keyboard_area_{};

@@ -200,19 +200,9 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
     }
   }
 
-  for (std::size_t j = 0; j < clamped_count; ++j) {
-    if (assigned_voice_indices[j] != npos) {
-      continue;
-    }
-    for (std::size_t h = 0; h < held_voice_count; ++h) {
-      if (held_voice_used[h]) {
-        continue;
-      }
-      assigned_voice_indices[j] = held_voice_indices[h];
-      held_voice_used[h] = true;
-      break;
-    }
-  }
+  // Reuse held voices only for the same MIDI note.
+  // For different notes, release the previous held voice and allocate a new voice
+  // so note tails can overlap naturally.
 
   for (std::size_t h = 0; h < held_voice_count; ++h) {
     if (held_voice_used[h]) {
