@@ -27,6 +27,14 @@ class AudioEngine {
   void setReleaseNormalized(float normalized);
   void setDelayEnabled(bool enabled);
   void setDelayParameters(float time_normalized, float feedback_normalized, float mix_normalized);
+  void setChorusEnabled(bool enabled);
+  void setChorusParameters(float rate_normalized, float depth_normalized, float mix_normalized);
+  void setFilterEnabled(bool enabled);
+  void setFilterParameters(float cutoff_normalized, float resonance_normalized, float mix_normalized);
+  void setDistortionEnabled(bool enabled);
+  void setDistortionParameters(float drive_normalized, float tone_normalized, float mix_normalized);
+  void setBitcrusherEnabled(bool enabled);
+  void setBitcrusherParameters(float bits_normalized, float rate_normalized, float mix_normalized);
   bool beginMicSampleRecording();
   void updateMicSampleRecording();
   bool finishMicSampleRecording(bool commit_sample = true);
@@ -51,6 +59,14 @@ class AudioEngine {
   [[nodiscard]] float delayTimeNormalized() const;
   [[nodiscard]] float delayFeedbackNormalized() const;
   [[nodiscard]] float delayMixNormalized() const;
+  [[nodiscard]] bool chorusEnabled() const;
+  [[nodiscard]] float chorusRateNormalized() const;
+  [[nodiscard]] float chorusDepthNormalized() const;
+  [[nodiscard]] float chorusMixNormalized() const;
+  [[nodiscard]] bool filterEnabled() const;
+  [[nodiscard]] float filterCutoffNormalized() const;
+  [[nodiscard]] float filterResonanceNormalized() const;
+  [[nodiscard]] float filterMixNormalized() const;
 
  private:
   struct PendingDelayEvent {
@@ -82,6 +98,8 @@ class AudioEngine {
   void enqueueDelayEvent(float note_value, float frequency, Waveform waveform, std::uint32_t now_ms);
   void processDelayEvents(std::uint32_t now_ms);
   void triggerDelayEvent(const PendingDelayEvent& event, std::uint32_t now_ms);
+  void processChorus(std::uint32_t now_ms, float delta_seconds);
+  void refreshOscillatorVoicesTimbre();
   void scheduleVoiceOff(std::size_t voice_index, std::uint32_t fire_ms);
   void clearPendingVoiceOff(std::size_t voice_index);
   void applyEnvelopeSettings();
@@ -111,6 +129,25 @@ class AudioEngine {
   float delay_time_normalized_ = 0.35f;
   float delay_feedback_normalized_ = 0.40f;
   float delay_mix_normalized_ = 0.30f;
+  bool chorus_enabled_ = true;
+  float chorus_rate_normalized_ = 0.30f;
+  float chorus_depth_normalized_ = 0.40f;
+  float chorus_mix_normalized_ = 0.30f;
+  bool filter_enabled_ = true;
+  float filter_cutoff_normalized_ = 1.00f;
+  float filter_resonance_normalized_ = 0.25f;
+  float filter_mix_normalized_ = 0.45f;
+  bool distortion_enabled_ = false;
+  float distortion_drive_normalized_ = 0.40f;
+  float distortion_tone_normalized_ = 0.55f;
+  float distortion_mix_normalized_ = 0.00f;
+  bool bitcrusher_enabled_ = false;
+  float bitcrusher_bits_normalized_ = 1.00f;
+  float bitcrusher_rate_normalized_ = 1.00f;
+  float bitcrusher_mix_normalized_ = 0.00f;
+  std::array<float, SynthConfig::audio.polyphony_voices> chorus_phase_{};
+  std::array<float, SynthConfig::audio.polyphony_voices> chorus_last_note_value_{};
+  std::array<std::uint32_t, SynthConfig::audio.polyphony_voices> chorus_last_retune_ms_{};
   std::array<PendingDelayEvent, SynthConfig::audio.polyphony_voices * 4> pending_delay_events_{};
   std::array<PendingVoiceOff, SynthConfig::audio.polyphony_voices * 2> pending_voice_off_{};
 };

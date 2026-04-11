@@ -16,15 +16,19 @@ constexpr std::array<UiParameter, 5> kUiParameters = {
     UiParameter::Sustain,
     UiParameter::Release,
 };
-constexpr std::array<UiEffect, 3> kUiEffects = {
+constexpr std::array<UiEffect, 4> kUiEffects = {
     UiEffect::Delay,
     UiEffect::Chorus,
-    UiEffect::Filter,
+    UiEffect::Distortion,
+    UiEffect::Bitcrusher,
 };
 constexpr std::array<UiLfoParameter, 3> kUiLfoParameters = {
     UiLfoParameter::Rate,
     UiLfoParameter::Depth,
     UiLfoParameter::Shape,
+};
+constexpr std::array<const char*, 11> kPresetLabels = {
+    "GTR", "PNO", "ORG", "REC", "PAD", "PLK", "BEL", "BRS", "BAS", "SYN", "RND",
 };
 constexpr std::array<int, 7> kWhiteSemitones = {0, 2, 4, 5, 7, 9, 11};
 constexpr std::array<int, 5> kBlackSemitones = {1, 3, 6, 8, 10};
@@ -57,6 +61,7 @@ void PerformanceUi::drawInitial(const UiState& state) {
   drawPerformanceBase();
   drawPitchModeSwitch(state);
   drawSliderControl(state);
+  drawPresets(state);
   drawMemorySlots(state);
   drawKeyboardBase();
   drawKeyboardOverlays(state);
@@ -117,12 +122,14 @@ void PerformanceUi::refreshSourceSelection(const UiState& state) {
 
 void PerformanceUi::refreshParameterSelection(const UiState& state) {
   drawParameterButtons(state);
+  drawPresets(state);
   drawMemorySlots(state);
 }
 
 void PerformanceUi::refreshParameterControl(const UiState& state) {
   drawParameterButtons(state);
   drawSliderControl(state);
+  drawPresets(state);
   drawMemorySlots(state);
 }
 
@@ -155,7 +162,12 @@ bool PerformanceUi::isParameterArea(int x, int y) const {
       return true;
     }
   }
-  for (const auto& rect : filter_parameter_buttons_) {
+  for (const auto& rect : distortion_parameter_buttons_) {
+    if (rect.contains(x, y)) {
+      return true;
+    }
+  }
+  for (const auto& rect : bitcrusher_parameter_buttons_) {
     if (rect.contains(x, y)) {
       return true;
     }
@@ -199,6 +211,15 @@ bool PerformanceUi::isSliderArea(int x, int y) const {
 
 bool PerformanceUi::isMemorySlotArea(int x, int y) const {
   for (const auto& rect : memory_slot_buttons_) {
+    if (rect.contains(x, y)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool PerformanceUi::isPresetArea(int x, int y) const {
+  for (const auto& rect : preset_buttons_) {
     if (rect.contains(x, y)) {
       return true;
     }
@@ -271,15 +292,27 @@ UiParameter PerformanceUi::parameterAt(int x, int y, UiParameter fallback) const
       }
     }
   }
-  for (std::size_t i = 0; i < filter_parameter_buttons_.size(); ++i) {
-    if (filter_parameter_buttons_[i].contains(x, y)) {
+  for (std::size_t i = 0; i < distortion_parameter_buttons_.size(); ++i) {
+    if (distortion_parameter_buttons_[i].contains(x, y)) {
       switch (i) {
         case 0:
-          return UiParameter::FilterCutoff;
+          return UiParameter::DistortionDrive;
         case 1:
-          return UiParameter::FilterResonance;
+          return UiParameter::DistortionTone;
         case 2:
-          return UiParameter::FilterMix;
+          return UiParameter::DistortionMix;
+      }
+    }
+  }
+  for (std::size_t i = 0; i < bitcrusher_parameter_buttons_.size(); ++i) {
+    if (bitcrusher_parameter_buttons_[i].contains(x, y)) {
+      switch (i) {
+        case 0:
+          return UiParameter::BitcrusherBits;
+        case 1:
+          return UiParameter::BitcrusherRate;
+        case 2:
+          return UiParameter::BitcrusherMix;
       }
     }
   }
@@ -395,6 +428,18 @@ float PerformanceUi::parameterValue(const UiState& state, UiParameter parameter)
       return state.filter_resonance;
     case UiParameter::FilterMix:
       return state.filter_mix;
+    case UiParameter::DistortionDrive:
+      return state.distortion_drive;
+    case UiParameter::DistortionTone:
+      return state.distortion_tone;
+    case UiParameter::DistortionMix:
+      return state.distortion_mix;
+    case UiParameter::BitcrusherBits:
+      return state.bitcrusher_bits;
+    case UiParameter::BitcrusherRate:
+      return state.bitcrusher_rate;
+    case UiParameter::BitcrusherMix:
+      return state.bitcrusher_mix;
     default:
       return state.volume;
   }
@@ -403,6 +448,15 @@ float PerformanceUi::parameterValue(const UiState& state, UiParameter parameter)
 std::size_t PerformanceUi::memorySlotAt(int x, int y, std::size_t fallback) const {
   for (std::size_t i = 0; i < memory_slot_buttons_.size(); ++i) {
     if (memory_slot_buttons_[i].contains(x, y)) {
+      return i;
+    }
+  }
+  return fallback;
+}
+
+std::size_t PerformanceUi::presetAt(int x, int y, std::size_t fallback) const {
+  for (std::size_t i = 0; i < preset_buttons_.size(); ++i) {
+    if (preset_buttons_[i].contains(x, y)) {
       return i;
     }
   }
@@ -438,6 +492,18 @@ const char* PerformanceUi::parameterLabel(UiParameter parameter) const {
     case UiParameter::FilterResonance:
       return "RES";
     case UiParameter::FilterMix:
+      return "MIX";
+    case UiParameter::DistortionDrive:
+      return "DRV";
+    case UiParameter::DistortionTone:
+      return "TON";
+    case UiParameter::DistortionMix:
+      return "MIX";
+    case UiParameter::BitcrusherBits:
+      return "BITS";
+    case UiParameter::BitcrusherRate:
+      return "RATE";
+    case UiParameter::BitcrusherMix:
       return "MIX";
     default:
       return "VOL";
@@ -555,14 +621,24 @@ void PerformanceUi::layout() {
     chorus_parameter_icons_[i].begin(chorus_parameter_buttons_[i]);
   }
 
-  effect_icon_buttons_[2] = {effects_x, effects_y + (effect_h + effect_gap) * 2, effect_w, effect_h};  // FLT label
-  for (std::size_t i = 0; i < filter_parameter_buttons_.size(); ++i) {
-    filter_parameter_buttons_[i] = {effect_icon_buttons_[2].x + effect_w + effect_gap +
-                                        static_cast<int>(i) * (effect_param_w + effect_gap),
-                                    effect_icon_buttons_[2].y,
-                                    effect_param_w,
-                                    effect_h};
-    filter_parameter_icons_[i].begin(filter_parameter_buttons_[i]);
+  effect_icon_buttons_[2] = {effects_x, effects_y + (effect_h + effect_gap) * 2, effect_w, effect_h};  // DST label
+  for (std::size_t i = 0; i < distortion_parameter_buttons_.size(); ++i) {
+    distortion_parameter_buttons_[i] = {effect_icon_buttons_[2].x + effect_w + effect_gap +
+                                            static_cast<int>(i) * (effect_param_w + effect_gap),
+                                        effect_icon_buttons_[2].y,
+                                        effect_param_w,
+                                        effect_h};
+    distortion_parameter_icons_[i].begin(distortion_parameter_buttons_[i]);
+  }
+
+  effect_icon_buttons_[3] = {effects_x, effects_y + (effect_h + effect_gap) * 3, effect_w, effect_h};  // BFR label
+  for (std::size_t i = 0; i < bitcrusher_parameter_buttons_.size(); ++i) {
+    bitcrusher_parameter_buttons_[i] = {effect_icon_buttons_[3].x + effect_w + effect_gap +
+                                            static_cast<int>(i) * (effect_param_w + effect_gap),
+                                        effect_icon_buttons_[3].y,
+                                        effect_param_w,
+                                        effect_h};
+    bitcrusher_parameter_icons_[i].begin(bitcrusher_parameter_buttons_[i]);
   }
 
   const int lfo_y = parameter_row_y + SynthConfig::ui.parameter_button_height + SynthConfig::ui.parameter_button_gap;
@@ -607,6 +683,18 @@ void PerformanceUi::layout() {
   for (std::size_t i = 0; i < memory_slot_buttons_.size(); ++i) {
     const int x = slider_area_.x + static_cast<int>(i) * (memory_w + memory_gap);
     memory_slot_buttons_[i] = {x, memory_y, memory_w, SynthConfig::ui.pitch_mode_height - 8};
+  }
+
+  const int preset_gap = 6;
+  const int preset_left = SynthConfig::ui.wave_button_padding;
+  const int preset_right = memory_slot_buttons_.front().x - memory_gap;
+  const int preset_available = std::max(0, preset_right - preset_left);
+  const int preset_w = (preset_available - preset_gap * (static_cast<int>(preset_buttons_.size()) - 1)) /
+                       static_cast<int>(preset_buttons_.size());
+  const int preset_h = std::max(20, SynthConfig::ui.pitch_mode_height - 8);
+  for (std::size_t i = 0; i < preset_buttons_.size(); ++i) {
+    const int x = preset_left + static_cast<int>(i) * (std::max(0, preset_w) + preset_gap);
+    preset_buttons_[i] = {x, memory_y, std::max(0, preset_w), preset_h};
   }
 
   const int memory_bottom = memory_slot_buttons_.back().y + memory_slot_buttons_.back().h;
@@ -659,7 +747,8 @@ void PerformanceUi::drawParameterButtons(const UiState& state) {
   drawEffectIcons(state);
   drawDelayParameterIcons(state);
   drawChorusParameterIcons(state);
-  drawFilterParameterIcons(state);
+  drawDistortionParameterIcons(state);
+  drawBitcrusherParameterIcons(state);
   drawLfoIcons(state);
   drawEnvelopePreview(state);
 }
@@ -679,13 +768,17 @@ void PerformanceUi::drawEffectIcons(const UiState& state) {
 void PerformanceUi::drawEffectIcon(std::size_t index, const UiState& state) {
   const Rect& rect = effect_icon_buttons_[index];
   const UiEffect effect = kUiEffects[index];
-  const bool enabled = (effect == UiEffect::Delay) ? state.delay_enabled
-                                                    : (effect == UiEffect::Chorus) ? state.chorus_enabled
-                                                                                   : state.filter_enabled;
+  const bool enabled = (effect == UiEffect::Delay)
+                           ? state.delay_enabled
+                           : (effect == UiEffect::Chorus) ? state.chorus_enabled
+                                                           : (effect == UiEffect::Distortion) ? state.distortion_enabled
+                                                                                               : state.bitcrusher_enabled;
   const std::uint32_t fill = enabled ? SynthConfig::ui.slider_fill_color : SynthConfig::ui.muted_button_color;
   const std::uint32_t border = enabled ? SynthConfig::ui.selected_border_color : SynthConfig::ui.muted_border_color;
   const std::uint32_t text = enabled ? SynthConfig::ui.selected_text_color : SynthConfig::ui.disabled_text_color;
-  const char* label = (effect == UiEffect::Delay) ? "DLY" : (effect == UiEffect::Chorus) ? "CHR" : "FLT";
+  const char* label = (effect == UiEffect::Delay)
+                          ? "DLY"
+                          : (effect == UiEffect::Chorus) ? "CHR" : (effect == UiEffect::Distortion) ? "DST" : "BFR";
 
   M5.Display.fillRoundRect(rect.x, rect.y, rect.w, rect.h, SynthConfig::ui.round_radius, fill);
   M5.Display.drawRoundRect(rect.x, rect.y, rect.w, rect.h, SynthConfig::ui.round_radius, border);
@@ -744,13 +837,43 @@ void PerformanceUi::drawFilterParameterIcons(const UiState& state) {
 }
 
 void PerformanceUi::drawFilterParameterIcon(std::size_t index, const UiState& state) {
-  const UiParameter parameter = (index == 0)
-                                    ? UiParameter::FilterCutoff
-                                    : (index == 1) ? UiParameter::FilterResonance : UiParameter::FilterMix;
+  const UiParameter parameter = (index == 0) ? UiParameter::FilterResonance : UiParameter::FilterMix;
   const bool selected = (state.selected_parameter == parameter);
   const float value = parameterValue(state, parameter);
   const char* label = parameterLabel(parameter);
   filter_parameter_icons_[index].drawBar(label, value, selected);
+}
+
+void PerformanceUi::drawDistortionParameterIcons(const UiState& state) {
+  for (std::size_t i = 0; i < distortion_parameter_buttons_.size(); ++i) {
+    drawDistortionParameterIcon(i, state);
+  }
+}
+
+void PerformanceUi::drawDistortionParameterIcon(std::size_t index, const UiState& state) {
+  const UiParameter parameter = (index == 0)
+                                    ? UiParameter::DistortionDrive
+                                    : (index == 1) ? UiParameter::DistortionTone : UiParameter::DistortionMix;
+  const bool selected = (state.selected_parameter == parameter);
+  const float value = parameterValue(state, parameter);
+  const char* label = parameterLabel(parameter);
+  distortion_parameter_icons_[index].drawBar(label, value, selected);
+}
+
+void PerformanceUi::drawBitcrusherParameterIcons(const UiState& state) {
+  for (std::size_t i = 0; i < bitcrusher_parameter_buttons_.size(); ++i) {
+    drawBitcrusherParameterIcon(i, state);
+  }
+}
+
+void PerformanceUi::drawBitcrusherParameterIcon(std::size_t index, const UiState& state) {
+  const UiParameter parameter = (index == 0)
+                                    ? UiParameter::BitcrusherBits
+                                    : (index == 1) ? UiParameter::BitcrusherRate : UiParameter::BitcrusherMix;
+  const bool selected = (state.selected_parameter == parameter);
+  const float value = parameterValue(state, parameter);
+  const char* label = parameterLabel(parameter);
+  bitcrusher_parameter_icons_[index].drawBar(label, value, selected);
 }
 
 void PerformanceUi::drawLfoIcons(const UiState& state) {
@@ -937,9 +1060,32 @@ void PerformanceUi::drawMemorySlots(const UiState& state) {
   }
 }
 
+void PerformanceUi::drawPresets(const UiState& state) {
+  for (std::size_t i = 0; i < preset_buttons_.size(); ++i) {
+    drawPreset(i, state);
+  }
+}
+
+void PerformanceUi::drawPreset(std::size_t index, const UiState& state) {
+  const Rect& rect = preset_buttons_[index];
+  const bool selected = state.preset_active && state.selected_preset == index;
+  const std::uint32_t fill = selected ? SynthConfig::ui.slider_fill_color : SynthConfig::ui.panel_color;
+  const std::uint32_t border = selected ? SynthConfig::ui.selected_border_color : SynthConfig::ui.muted_border_color;
+  const std::uint32_t text = selected ? SynthConfig::ui.selected_text_color : SynthConfig::ui.muted_text_color;
+
+  M5.Display.fillRoundRect(rect.x, rect.y, rect.w, rect.h, SynthConfig::ui.round_radius, fill);
+  M5.Display.drawRoundRect(rect.x, rect.y, rect.w, rect.h, SynthConfig::ui.round_radius, border);
+  M5.Display.setTextDatum(middle_center);
+  M5.Display.setTextColor(text);
+  M5.Display.setTextSize(1);
+  M5.Display.drawString(kPresetLabels[index], rect.x + rect.w / 2, rect.y + rect.h / 2);
+  M5.Display.setTextDatum(top_left);
+  M5.Display.setTextSize(2);
+}
+
 void PerformanceUi::drawMemorySlot(std::size_t index, const UiState& state) {
   const Rect& rect = memory_slot_buttons_[index];
-  const bool selected = state.selected_memory_slot == index;
+  const bool selected = (!state.preset_active) && state.selected_memory_slot == index;
   const std::uint32_t fill = selected ? SynthConfig::ui.slider_fill_color : SynthConfig::ui.muted_button_color;
   const std::uint32_t border = selected ? SynthConfig::ui.selected_border_color : SynthConfig::ui.muted_border_color;
   const std::uint32_t text = selected ? SynthConfig::ui.selected_text_color : SynthConfig::ui.muted_text_color;

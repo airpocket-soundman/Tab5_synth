@@ -16,6 +16,7 @@ class SynthApp {
  private:
   void handleTouch();
   void handleSelectionTouch(int x, int y);
+  void applyPreset(std::size_t preset_index);
   void handlePitchModeTouch(int x, int y);
   void handleSliderTouch(int x, int y);
   void handlePerformanceTouches(const std::array<float, SynthConfig::ui.max_touch_points>& note_values,
@@ -28,6 +29,9 @@ class SynthApp {
   void finishMicRecording();
   void syncUiState();
   void stopNote();
+  void applyLfoModulation();
+  [[nodiscard]] float lfoWaveValue(float phase, float shape) const;
+  [[nodiscard]] float modulatedValue(UiParameter target, float base_value, std::uint32_t now_ms) const;
   void loadLfoTargetState(UiParameter target);
   void storeLfoTargetState(UiParameter target);
   void saveCurrentSlot();
@@ -40,11 +44,11 @@ class SynthApp {
     float rate = 0.35f;
     float depth = 0.45f;
     float shape = 0.20f;
-    bool enabled = true;
+    bool enabled = false;
   };
-  static constexpr std::size_t kUiParameterCount = static_cast<std::size_t>(UiParameter::FilterMix) + 1;
+  static constexpr std::size_t kUiParameterCount = static_cast<std::size_t>(UiParameter::BitcrusherMix) + 1;
   struct PersistedSlot {
-    std::uint32_t version = 2;
+    std::uint32_t version = 3;
     std::uint8_t selected_waveform = 0;
     std::uint8_t selected_source = 0;
     std::uint8_t selected_parameter = 0;
@@ -53,7 +57,9 @@ class SynthApp {
     std::uint8_t quantize_to_semitone = 0;
     std::uint8_t delay_enabled = 1;
     std::uint8_t chorus_enabled = 1;
-    std::uint8_t filter_enabled = 1;
+    std::uint8_t filter_enabled = 0;
+    std::uint8_t distortion_enabled = 0;
+    std::uint8_t bitcrusher_enabled = 0;
     float volume = 0.45f;
     float attack = 0.0f;
     float decay = 0.0f;
@@ -65,9 +71,15 @@ class SynthApp {
     float chorus_rate = 0.30f;
     float chorus_depth = 0.40f;
     float chorus_mix = 0.30f;
-    float filter_cutoff = 0.70f;
+    float filter_cutoff = 1.00f;
     float filter_resonance = 0.25f;
     float filter_mix = 0.45f;
+    float distortion_drive = 0.40f;
+    float distortion_tone = 0.55f;
+    float distortion_mix = 0.00f;
+    float bitcrusher_bits = 1.00f;
+    float bitcrusher_rate = 1.00f;
+    float bitcrusher_mix = 0.00f;
     float lfo_target_rate[kUiParameterCount]{};
     float lfo_target_depth[kUiParameterCount]{};
     float lfo_target_shape[kUiParameterCount]{};
@@ -78,6 +90,7 @@ class SynthApp {
   bool preferences_ready_ = false;
   bool mic_recording_ = false;
   std::uint32_t mic_recording_started_ms_ = 0;
+  std::uint32_t lfo_start_ms_ = 0;
   std::uint32_t last_note_input_ms_ = 0;
   std::uint32_t last_ui_refresh_ms_ = 0;
   std::size_t last_drawn_touch_count_ = 0;

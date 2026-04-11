@@ -12,6 +12,9 @@ constexpr float kDelayMinMs = 40.0f;
 constexpr float kDelayMaxMs = 700.0f;
 constexpr std::uint32_t kEchoGateMinMs = 18;
 constexpr float kMinDelayGain = 0.015f;
+constexpr float kTwoPi = 6.28318530718f;
+constexpr std::uint32_t kChorusRetuneMinMs = 8;
+constexpr float kChorusRetuneThresholdSemitone = 0.004f;
 }
 
 void AudioEngine::begin() {
@@ -26,6 +29,14 @@ void AudioEngine::begin() {
   onboard_mic_source_.begin();
   external_i2s_source_.begin();
   oscillator_source_.setVolume(volume_);
+  oscillator_source_.setFilterEnabled(filter_enabled_);
+  oscillator_source_.setFilterParameters(filter_cutoff_normalized_, filter_resonance_normalized_, filter_mix_normalized_);
+  oscillator_source_.setDistortionEnabled(distortion_enabled_);
+  oscillator_source_.setDistortionParameters(distortion_drive_normalized_, distortion_tone_normalized_,
+                                             distortion_mix_normalized_);
+  oscillator_source_.setBitcrusherEnabled(bitcrusher_enabled_);
+  oscillator_source_.setBitcrusherParameters(bitcrusher_bits_normalized_, bitcrusher_rate_normalized_,
+                                             bitcrusher_mix_normalized_);
   onboard_mic_source_.setVolume(volume_);
   external_i2s_source_.setVolume(volume_);
   last_envelope_update_ms_ = millis();
@@ -53,6 +64,7 @@ void AudioEngine::update() {
     applyVoiceLevel(i, env, active_waveform_);
   }
 
+  processChorus(now, delta_seconds);
   processDelayEvents(now);
 }
 
@@ -109,6 +121,8 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
     active_midi_notes_[0] = requested_midi_notes[0];
     active_note_values_[0] = requested_note_values[0];
     active_frequencies_[0] = frequency;
+    chorus_last_note_value_[0] = requested_note_values[0];
+    chorus_last_retune_ms_[0] = millis();
     last_retrigger_ms_[0] = millis();
     voice_started_order_[0] = next_voice_order_++;
     active_waveform_ = waveform;
@@ -245,6 +259,8 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
     active_midi_notes_[voice_index] = requested_midi_notes[j];
     active_note_values_[voice_index] = note_value;
     active_frequencies_[voice_index] = frequency;
+    chorus_last_note_value_[voice_index] = note_value;
+    chorus_last_retune_ms_[voice_index] = millis();
   }
 
   for (std::size_t j = 0; j < clamped_count; ++j) {
@@ -272,6 +288,8 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
     active_midi_notes_[voice_index] = requested_midi_notes[j];
     active_note_values_[voice_index] = note_value;
     active_frequencies_[voice_index] = frequency;
+    chorus_last_note_value_[voice_index] = note_value;
+    chorus_last_retune_ms_[voice_index] = millis();
     last_retrigger_ms_[voice_index] = millis();
     voice_started_order_[voice_index] = next_voice_order_++;
     enqueueDelayEvent(note_value, frequency, waveform, millis());
@@ -333,6 +351,94 @@ void AudioEngine::setDelayParameters(float time_normalized, float feedback_norma
   delay_time_normalized_ = std::clamp(time_normalized, 0.0f, 1.0f);
   delay_feedback_normalized_ = std::clamp(feedback_normalized, 0.0f, 1.0f);
   delay_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+}
+
+void AudioEngine::setChorusEnabled(bool enabled) {
+  if (chorus_enabled_ == enabled) {
+    return;
+  }
+  chorus_enabled_ = enabled;
+  if (chorus_enabled_) {
+    return;
+  }
+
+  if (active_source_type_ != AudioSourceType::Oscillator) {
+    return;
+  }
+
+  AudioSource& source = sourceFor(active_source_type_);
+  const std::uint32_t now_ms = millis();
+  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+    if (!voice_active_[i] || !voice_held_[i] || voice_is_delay_[i]) {
+      continue;
+    }
+    const float base_note = active_note_values_[i];
+    const float base_freq = noteValueToFrequency(base_note);
+    if (!source.noteOn(i, base_note, base_freq, active_waveform_)) {
+      continue;
+    }
+    chorus_last_note_value_[i] = base_note;
+    chorus_last_retune_ms_[i] = now_ms;
+  }
+}
+
+void AudioEngine::setChorusParameters(float rate_normalized, float depth_normalized, float mix_normalized) {
+  chorus_rate_normalized_ = std::clamp(rate_normalized, 0.0f, 1.0f);
+  chorus_depth_normalized_ = std::clamp(depth_normalized, 0.0f, 1.0f);
+  chorus_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+}
+
+void AudioEngine::setFilterEnabled(bool enabled) {
+  if (filter_enabled_ == enabled) {
+    return;
+  }
+  filter_enabled_ = enabled;
+  oscillator_source_.setFilterEnabled(filter_enabled_);
+  refreshOscillatorVoicesTimbre();
+}
+
+void AudioEngine::setFilterParameters(float cutoff_normalized, float resonance_normalized, float mix_normalized) {
+  filter_cutoff_normalized_ = std::clamp(cutoff_normalized, 0.0f, 1.0f);
+  filter_resonance_normalized_ = std::clamp(resonance_normalized, 0.0f, 1.0f);
+  filter_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+  oscillator_source_.setFilterParameters(filter_cutoff_normalized_, filter_resonance_normalized_, filter_mix_normalized_);
+  refreshOscillatorVoicesTimbre();
+}
+
+void AudioEngine::setDistortionEnabled(bool enabled) {
+  if (distortion_enabled_ == enabled) {
+    return;
+  }
+  distortion_enabled_ = enabled;
+  oscillator_source_.setDistortionEnabled(distortion_enabled_);
+  refreshOscillatorVoicesTimbre();
+}
+
+void AudioEngine::setDistortionParameters(float drive_normalized, float tone_normalized, float mix_normalized) {
+  distortion_drive_normalized_ = std::clamp(drive_normalized, 0.0f, 1.0f);
+  distortion_tone_normalized_ = std::clamp(tone_normalized, 0.0f, 1.0f);
+  distortion_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+  oscillator_source_.setDistortionParameters(distortion_drive_normalized_, distortion_tone_normalized_,
+                                             distortion_mix_normalized_);
+  refreshOscillatorVoicesTimbre();
+}
+
+void AudioEngine::setBitcrusherEnabled(bool enabled) {
+  if (bitcrusher_enabled_ == enabled) {
+    return;
+  }
+  bitcrusher_enabled_ = enabled;
+  oscillator_source_.setBitcrusherEnabled(bitcrusher_enabled_);
+  refreshOscillatorVoicesTimbre();
+}
+
+void AudioEngine::setBitcrusherParameters(float bits_normalized, float rate_normalized, float mix_normalized) {
+  bitcrusher_bits_normalized_ = std::clamp(bits_normalized, 0.0f, 1.0f);
+  bitcrusher_rate_normalized_ = std::clamp(rate_normalized, 0.0f, 1.0f);
+  bitcrusher_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+  oscillator_source_.setBitcrusherParameters(bitcrusher_bits_normalized_, bitcrusher_rate_normalized_,
+                                             bitcrusher_mix_normalized_);
+  refreshOscillatorVoicesTimbre();
 }
 
 bool AudioEngine::beginMicSampleRecording() {
@@ -457,6 +563,38 @@ float AudioEngine::delayMixNormalized() const {
   return delay_mix_normalized_;
 }
 
+bool AudioEngine::chorusEnabled() const {
+  return chorus_enabled_;
+}
+
+float AudioEngine::chorusRateNormalized() const {
+  return chorus_rate_normalized_;
+}
+
+float AudioEngine::chorusDepthNormalized() const {
+  return chorus_depth_normalized_;
+}
+
+float AudioEngine::chorusMixNormalized() const {
+  return chorus_mix_normalized_;
+}
+
+bool AudioEngine::filterEnabled() const {
+  return filter_enabled_;
+}
+
+float AudioEngine::filterCutoffNormalized() const {
+  return filter_cutoff_normalized_;
+}
+
+float AudioEngine::filterResonanceNormalized() const {
+  return filter_resonance_normalized_;
+}
+
+float AudioEngine::filterMixNormalized() const {
+  return filter_mix_normalized_;
+}
+
 float AudioEngine::noteValueToFrequency(float note_value) {
   return 440.0f * std::pow(2.0f, (note_value - 69.0f) / 12.0f);
 }
@@ -520,6 +658,9 @@ void AudioEngine::resetVoice(std::size_t voice_index) {
   active_frequencies_[voice_index] = 0.0f;
   last_retrigger_ms_[voice_index] = 0;
   voice_started_order_[voice_index] = 0;
+  chorus_phase_[voice_index] = 0.0f;
+  chorus_last_note_value_[voice_index] = 0.0f;
+  chorus_last_retune_ms_[voice_index] = 0;
 }
 
 std::size_t AudioEngine::pickVoiceForEcho() const {
@@ -631,6 +772,8 @@ void AudioEngine::triggerDelayEvent(const PendingDelayEvent& event, std::uint32_
   active_midi_notes_[voice_index] = midi_note;
   active_note_values_[voice_index] = event.note_value;
   active_frequencies_[voice_index] = event.frequency;
+  chorus_last_note_value_[voice_index] = event.note_value;
+  chorus_last_retune_ms_[voice_index] = now_ms;
   last_retrigger_ms_[voice_index] = now_ms;
   voice_started_order_[voice_index] = next_voice_order_++;
 
@@ -654,6 +797,50 @@ void AudioEngine::triggerDelayEvent(const PendingDelayEvent& event, std::uint32_
         }
       }
     }
+  }
+}
+
+void AudioEngine::processChorus(std::uint32_t now_ms, float delta_seconds) {
+  if (!chorus_enabled_ || chorus_mix_normalized_ <= 0.0f || active_source_type_ != AudioSourceType::Oscillator) {
+    return;
+  }
+  AudioSource& source = sourceFor(active_source_type_);
+  const float rate_hz = 0.10f + (chorus_rate_normalized_ * 7.5f);
+  const float depth_semitones = (0.02f + 1.20f * chorus_depth_normalized_) * chorus_mix_normalized_;
+
+  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+    if (!voice_active_[i] || !voice_held_[i] || voice_is_delay_[i]) {
+      continue;
+    }
+    chorus_phase_[i] += delta_seconds * rate_hz * kTwoPi;
+    if (chorus_phase_[i] > kTwoPi) {
+      chorus_phase_[i] = std::fmod(chorus_phase_[i], kTwoPi);
+    }
+    const float stereo_offset = static_cast<float>(i) * 0.9f;
+    const float mod_note = active_note_values_[i] + std::sinf(chorus_phase_[i] + stereo_offset) * depth_semitones;
+    if ((now_ms - chorus_last_retune_ms_[i]) < kChorusRetuneMinMs &&
+        std::fabs(mod_note - chorus_last_note_value_[i]) < kChorusRetuneThresholdSemitone) {
+      continue;
+    }
+    const float mod_freq = noteValueToFrequency(mod_note);
+    if (!source.noteOn(i, mod_note, mod_freq, active_waveform_)) {
+      continue;
+    }
+    chorus_last_retune_ms_[i] = now_ms;
+    chorus_last_note_value_[i] = mod_note;
+  }
+}
+
+void AudioEngine::refreshOscillatorVoicesTimbre() {
+  if (active_source_type_ != AudioSourceType::Oscillator) {
+    return;
+  }
+  AudioSource& source = sourceFor(active_source_type_);
+  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+    if (!voice_active_[i]) {
+      continue;
+    }
+    source.noteOn(i, active_note_values_[i], active_frequencies_[i], active_waveform_);
   }
 }
 
@@ -694,6 +881,9 @@ void AudioEngine::clearVoices() {
   active_frequencies_.fill(0.0f);
   last_retrigger_ms_.fill(0);
   voice_started_order_.fill(0);
+  chorus_phase_.fill(0.0f);
+  chorus_last_note_value_.fill(0.0f);
+  chorus_last_retune_ms_.fill(0);
   for (auto& event : pending_delay_events_) {
     event.active = false;
   }

@@ -26,12 +26,20 @@ enum class UiParameter {
   FilterCutoff,
   FilterResonance,
   FilterMix,
+  DistortionDrive,
+  DistortionTone,
+  DistortionMix,
+  BitcrusherBits,
+  BitcrusherRate,
+  BitcrusherMix,
 };
 
 enum class UiEffect {
   Delay,
   Chorus,
   Filter,
+  Distortion,
+  Bitcrusher,
 };
 
 enum class UiLfoParameter { Rate, Depth, Shape };
@@ -43,8 +51,10 @@ struct UiState {
   UiEffect selected_effect = UiEffect::Delay;
   UiLfoParameter selected_lfo_parameter = UiLfoParameter::Rate;
   std::size_t selected_memory_slot = 0;
+  std::size_t selected_preset = 0;
+  bool preset_active = false;
   bool lfo_edit_mode = false;
-  bool lfo_enabled = true;
+  bool lfo_enabled = false;
   bool quantize_to_semitone = false;
   bool oscillator_available = true;
   bool onboard_mic_available = false;
@@ -65,10 +75,18 @@ struct UiState {
   float chorus_depth = 0.40f;
   float chorus_mix = 0.30f;
   bool chorus_enabled = true;
-  float filter_cutoff = 0.70f;
+  float filter_cutoff = 1.00f;
   float filter_resonance = 0.25f;
   float filter_mix = 0.45f;
-  bool filter_enabled = true;
+  bool filter_enabled = false;
+  float distortion_drive = 0.40f;
+  float distortion_tone = 0.55f;
+  float distortion_mix = 0.00f;
+  bool distortion_enabled = false;
+  float bitcrusher_bits = 1.00f;
+  float bitcrusher_rate = 1.00f;
+  float bitcrusher_mix = 0.00f;
+  bool bitcrusher_enabled = false;
   float lfo_rate = 0.35f;
   float lfo_depth = 0.45f;
   float lfo_shape = 0.20f;
@@ -99,6 +117,7 @@ class PerformanceUi {
   [[nodiscard]] bool isKeyboardArea(int x, int y) const;
   [[nodiscard]] bool isSliderArea(int x, int y) const;
   [[nodiscard]] bool isMemorySlotArea(int x, int y) const;
+  [[nodiscard]] bool isPresetArea(int x, int y) const;
   [[nodiscard]] bool isPitchModeArea(int x, int y) const;
   [[nodiscard]] bool quantizeModeAt(int x, int y, bool fallback) const;
   [[nodiscard]] Waveform waveformAt(int x, int y, Waveform fallback) const;
@@ -110,6 +129,7 @@ class PerformanceUi {
   [[nodiscard]] float keyboardNoteValueAt(int x, int y) const;
   [[nodiscard]] float sliderValueFromTouch(int x) const;
   [[nodiscard]] std::size_t memorySlotAt(int x, int y, std::size_t fallback) const;
+  [[nodiscard]] std::size_t presetAt(int x, int y, std::size_t fallback) const;
 
  private:
   [[nodiscard]] bool isSourceAvailable(AudioSourceType source, const UiState& state) const;
@@ -132,6 +152,10 @@ class PerformanceUi {
   void drawChorusParameterIcon(std::size_t index, const UiState& state);
   void drawFilterParameterIcons(const UiState& state);
   void drawFilterParameterIcon(std::size_t index, const UiState& state);
+  void drawDistortionParameterIcons(const UiState& state);
+  void drawDistortionParameterIcon(std::size_t index, const UiState& state);
+  void drawBitcrusherParameterIcons(const UiState& state);
+  void drawBitcrusherParameterIcon(std::size_t index, const UiState& state);
   void drawLfoIcons(const UiState& state);
   void drawLfoLabel(const UiState& state) const;
   void drawLfoIcon(std::size_t index, const UiState& state);
@@ -141,6 +165,8 @@ class PerformanceUi {
   void drawSliderControl(const UiState& state);
   void drawMemorySlots(const UiState& state);
   void drawMemorySlot(std::size_t index, const UiState& state);
+  void drawPresets(const UiState& state);
+  void drawPreset(std::size_t index, const UiState& state);
   void drawPitchModeSwitch(const UiState& state);
   void drawPitchModeButton(const Rect& rect, const char* label, bool selected);
   void drawPerformanceBase();
@@ -157,14 +183,17 @@ class PerformanceUi {
 
   std::array<Rect, 6> source_buttons_{};
   std::array<Rect, 5> parameter_buttons_{};
-  std::array<Rect, 3> effect_icon_buttons_{};
+  std::array<Rect, 4> effect_icon_buttons_{};
   std::array<Rect, 3> delay_parameter_buttons_{};
   std::array<Rect, 3> chorus_parameter_buttons_{};
-  std::array<Rect, 3> filter_parameter_buttons_{};
+  std::array<Rect, 2> filter_parameter_buttons_{};
+  std::array<Rect, 3> distortion_parameter_buttons_{};
+  std::array<Rect, 3> bitcrusher_parameter_buttons_{};
   Rect lfo_label_area_{};
   std::array<Rect, 3> lfo_icon_buttons_{};
   Rect envelope_preview_area_{};
   Rect slider_area_{};
+  std::array<Rect, 11> preset_buttons_{};
   std::array<Rect, 5> memory_slot_buttons_{};
   Rect performance_area_{};
   Rect keyboard_area_{};
@@ -174,7 +203,9 @@ class PerformanceUi {
   std::array<ParameterIcon, 5> parameter_icons_{};
   std::array<ParameterIcon, 3> delay_parameter_icons_{};
   std::array<ParameterIcon, 3> chorus_parameter_icons_{};
-  std::array<ParameterIcon, 3> filter_parameter_icons_{};
+  std::array<ParameterIcon, 2> filter_parameter_icons_{};
+  std::array<ParameterIcon, 3> distortion_parameter_icons_{};
+  std::array<ParameterIcon, 3> bitcrusher_parameter_icons_{};
   std::array<ParameterIcon, 3> lfo_parameter_icons_{};
   std::size_t previous_touch_count_ = 0;
   std::array<int, SynthConfig::ui.max_touch_points> previous_touch_xs_{};
