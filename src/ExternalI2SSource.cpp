@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 bool ExternalI2SSource::begin() {
 #if defined(ESP_PLATFORM) && __has_include(<driver/i2s_std.h>)
@@ -70,8 +71,8 @@ bool ExternalI2SSource::initReceiver() {
 
   i2s_std_config_t std_cfg{};
   std_cfg.clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SynthConfig::audio.external_i2s_sample_rate);
-  std_cfg.slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO);
-  std_cfg.slot_cfg.slot_mask = I2S_STD_SLOT_LEFT;
+  std_cfg.slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_STEREO);
+  std_cfg.slot_cfg.slot_mask = I2S_STD_SLOT_BOTH;
   std_cfg.gpio_cfg.mclk = I2S_GPIO_UNUSED;
   std_cfg.gpio_cfg.bclk = static_cast<gpio_num_t>(AudioBusConfig::ExternalI2SPins::bclk);
   std_cfg.gpio_cfg.ws = static_cast<gpio_num_t>(AudioBusConfig::ExternalI2SPins::ws);
@@ -136,28 +137,31 @@ void ExternalI2SSource::monitorTask() {
   std::size_t buffer_index = 0;
 
   while (monitoring_) {
-    auto& buffer = buffers_[buffer_index];
+    auto& rx_buffer = rx_buffers_[buffer_index];
+    auto& mono_buffer = mono_buffers_[buffer_index];
     std::size_t bytes_read = 0;
-    esp_err_t result = i2s_channel_read(rx_handle_, buffer.data(), buffer.size() * sizeof(std::int16_t),
+    esp_err_t result = i2s_channel_read(rx_handle_, rx_buffer.data(), rx_buffer.size() * sizeof(std::int32_t),
                                         &bytes_read, pdMS_TO_TICKS(40));
     if (result != ESP_OK || bytes_read == 0) {
       continue;
     }
 
-    const std::size_t sample_count = bytes_read / sizeof(std::int16_t);
-    if (sample_count == 0) {
+    const std::size_t words_read = bytes_read / sizeof(std::int32_t);
+    const std::size_t frame_count = words_read / kRxWordsPerFrame;
+    if (frame_count == 0) {
       continue;
     }
 
-    while (monitoring_ && M5.Speaker.isPlaying(SynthConfig::audio.audio_channel) >= 2) {
-      vTaskDelay(pdMS_TO_TICKS(1));
-    }
-    if (!monitoring_) {
-      break;
+    const std::size_t samples_to_play = std::min(frame_count, mono_buffer.size());
+    for (std::size_t i = 0; i < samples_to_play; ++i) {
+      const std::int32_t left_word = rx_buffer[i * kRxWordsPerFrame];
+      mono_buffer[i] = static_cast<std::int16_t>(left_word >> 16);
     }
 
-    M5.Speaker.playRaw(buffer.data(), sample_count, SynthConfig::audio.external_i2s_sample_rate, false, 1,
-                       SynthConfig::audio.audio_channel, false);
+    if (M5.Speaker.isPlaying(SynthConfig::audio.audio_channel) < 2) {
+      M5.Speaker.playRaw(mono_buffer.data(), samples_to_play, SynthConfig::audio.external_i2s_sample_rate, false, 1,
+                         SynthConfig::audio.audio_channel, false);
+    }
 
     buffer_index = (buffer_index + 1) % kBufferCount;
   }

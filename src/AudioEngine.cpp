@@ -70,6 +70,17 @@ void AudioEngine::update() {
 
 void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Waveform waveform) {
   AudioSource& source = sourceFor(active_source_type_);
+  if (active_source_type_ == AudioSourceType::ExternalI2S) {
+    if (!source.isAvailable()) {
+      return;
+    }
+    // Always-on monitor mode for external I2S:
+    // keep receiver active regardless of keyboard touches.
+    source.noteOn(0, 0.0f, 0.0f, waveform);
+    active_waveform_ = waveform;
+    return;
+  }
+
   if (!source.isAvailable() || count == 0) {
     noteOff();
     return;
@@ -299,6 +310,10 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
 }
 
 void AudioEngine::noteOff() {
+  if (active_source_type_ == AudioSourceType::ExternalI2S) {
+    // Keep monitoring while External I2S source is selected.
+    return;
+  }
   for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
     if (voice_active_[i] && voice_held_[i]) {
       voice_held_[i] = false;
@@ -316,11 +331,17 @@ void AudioEngine::setVolume(float volume) {
 
 void AudioEngine::setSourceType(AudioSourceType source_type) {
   if (active_source_type_ == source_type) {
+    if (source_type == AudioSourceType::ExternalI2S) {
+      sourceFor(active_source_type_).noteOn(0, 0.0f, 0.0f, active_waveform_);
+    }
     return;
   }
 
   stopAllImmediately();
   active_source_type_ = source_type;
+  if (active_source_type_ == AudioSourceType::ExternalI2S) {
+    sourceFor(active_source_type_).noteOn(0, 0.0f, 0.0f, active_waveform_);
+  }
 }
 
 void AudioEngine::setAttackNormalized(float normalized) {

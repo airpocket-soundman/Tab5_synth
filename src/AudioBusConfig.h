@@ -12,8 +12,8 @@ struct OnboardMicPins {
 };
 
 struct ExternalI2SPins {
-  static constexpr int bclk = 16;
-  static constexpr int ws = 45;
+  static constexpr int bclk = 47;
+  static constexpr int ws = 2;
   static constexpr int din = 3;
   static constexpr int mclk = 4;
 };

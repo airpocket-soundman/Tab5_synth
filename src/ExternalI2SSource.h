@@ -31,6 +31,8 @@ class ExternalI2SSource : public AudioSource {
 #if defined(ESP_PLATFORM) && __has_include(<driver/i2s_std.h>)
   static constexpr std::size_t kBufferFrames = SynthConfig::audio.external_i2s_buffer_frames;
   static constexpr std::size_t kBufferCount = SynthConfig::audio.external_i2s_buffer_count;
+  static constexpr std::size_t kRxWordsPerFrame = 2;  // stereo interleaved
+  static constexpr std::size_t kRxWordsPerBuffer = kBufferFrames * kRxWordsPerFrame;
 
   static void monitorTaskEntry(void* arg);
   bool initReceiver();
@@ -40,7 +42,8 @@ class ExternalI2SSource : public AudioSource {
 
   i2s_chan_handle_t rx_handle_ = nullptr;
   TaskHandle_t monitor_task_ = nullptr;
-  std::array<std::array<std::int16_t, kBufferFrames>, kBufferCount> buffers_{};
+  std::array<std::array<std::int32_t, kRxWordsPerBuffer>, kBufferCount> rx_buffers_{};
+  std::array<std::array<std::int16_t, kBufferFrames>, kBufferCount> mono_buffers_{};
 #endif
 
   bool initialized_ = false;
