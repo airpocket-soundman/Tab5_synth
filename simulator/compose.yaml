@@ -1,0 +1,7 @@
+services:
+  tab5-lvgl-preview:
+    build:
+      context: ..
+      dockerfile: simulator/Dockerfile
+    ports:
+      - "8088:80"

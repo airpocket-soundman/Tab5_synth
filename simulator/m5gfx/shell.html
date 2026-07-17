@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Tab5 Synth M5GFX Preview</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; background: #050609; overflow: hidden; }
+    body { display: grid; place-items: center; }
+    canvas {
+      display: block;
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      image-rendering: auto;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="1280" height="720" tabindex="-1"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    var Module = {
+      canvas,
+      print: (text) => console.log(text),
+      printErr: (text) => console.error(text)
+    };
+    window.addEventListener('pointerdown', () => canvas.focus());
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>
