@@ -26,6 +26,7 @@ class OscillatorSource : public AudioSource {
 
  private:
   static constexpr std::size_t kWaveTableSize = SynthConfig::audio.wavetable_size;
+  static constexpr std::size_t kSineWaveTableSize = 1024;
 
   void buildWaveTables();
   void buildFilteredWaveTables();
@@ -48,6 +49,9 @@ class OscillatorSource : public AudioSource {
   float bitcrusher_rate_normalized_ = 1.00f;
   float bitcrusher_mix_normalized_ = 0.00f;
   bool filter_tables_dirty_ = true;
+  std::array<std::uint8_t, SynthConfig::audio.polyphony_voices> last_channel_volume_{};
+  std::array<std::uint8_t, kWaveTableSize> silence_wave_{};
+  std::array<std::int16_t, kSineWaveTableSize> sine_wave_16_{};
   std::array<std::uint8_t, kWaveTableSize> sine_wave_{};
   std::array<std::uint8_t, kWaveTableSize> saw_wave_{};
   std::array<std::uint8_t, kWaveTableSize> square_wave_{};

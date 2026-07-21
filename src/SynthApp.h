@@ -29,6 +29,7 @@ class SynthApp {
   void finishMicRecording();
   void syncUiState();
   void stopNote();
+  void refreshDeferredPerformance();
   void applyLfoModulation();
   [[nodiscard]] float lfoWaveValue(float phase, float shape) const;
   [[nodiscard]] float modulatedValue(UiParameter target, float base_value, std::uint32_t now_ms) const;
@@ -89,6 +90,7 @@ class SynthApp {
   Preferences preferences_{};
   bool preferences_ready_ = false;
   bool mic_recording_ = false;
+  bool performance_redraw_pending_ = false;
   std::uint32_t mic_recording_started_ms_ = 0;
   std::uint32_t lfo_start_ms_ = 0;
   std::uint32_t last_note_input_ms_ = 0;

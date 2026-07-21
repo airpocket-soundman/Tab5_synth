@@ -91,7 +91,9 @@ typedef struct {
     int16_t width;
     int16_t height;
     int16_t press_progress;
+    int16_t midi_note;
     bool black;
+    bool visual_dirty;
 } piano_key_t;
 
 static const char *const target_names[TARGET_COUNT] = {
@@ -150,6 +152,11 @@ static int16_t amp_envelope_anim_start[4];
 static int16_t amp_envelope_anim_target[4];
 static lv_obj_t *xy_marker;
 static lv_obj_t *xy_readout;
+static lv_obj_t *xy_pad;
+static lv_area_t xy_marker_dirty_area;
+static bool xy_marker_visual_dirty;
+static bool xy_readout_visual_dirty;
+static lv_obj_t *keyboard_panel;
 static lv_obj_t *status_label;
 static lv_obj_t *source_readout;
 static lv_obj_t *target_label;
@@ -164,7 +171,60 @@ static bool programmatic_rotary_update;
 static bool animate_control_updates;
 static piano_key_t white_keys[15];
 static piano_key_t black_keys[10];
+
+typedef struct {
+    lv_indev_t *indev;
+    int16_t midi_note;
+} keyboard_gesture_t;
+
+static keyboard_gesture_t keyboard_gestures[5];
 static lvgl_synth_theme_t current_theme = LVGL_SYNTH_THEME_RETRO_WOOD;
+static lvgl_synth_callbacks_t callbacks;
+
+static void notify_state_changed(void)
+{
+    if(callbacks.state_changed != NULL) callbacks.state_changed(callbacks.user_data);
+}
+
+static void notify_note_changed(float midi_note, bool pressed)
+{
+    if(callbacks.note_changed != NULL) callbacks.note_changed(midi_note, pressed, callbacks.user_data);
+}
+
+static void notify_xy_note_changed(float midi_note, bool pressed)
+{
+    if(callbacks.xy_note_changed != NULL) callbacks.xy_note_changed(midi_note, pressed, callbacks.user_data);
+}
+
+static void notify_mic_recording_changed(bool recording)
+{
+    if(callbacks.mic_recording_changed != NULL) {
+        callbacks.mic_recording_changed(recording, callbacks.user_data);
+    }
+}
+
+void lvgl_synth_ui_set_callbacks(const lvgl_synth_callbacks_t *new_callbacks)
+{
+    if(new_callbacks == NULL) memset(&callbacks, 0, sizeof(callbacks));
+    else callbacks = *new_callbacks;
+}
+
+void lvgl_synth_ui_get_state(lvgl_synth_state_t *snapshot)
+{
+    int i;
+    if(snapshot == NULL) return;
+    memset(snapshot, 0, sizeof(*snapshot));
+    memcpy(snapshot->values, state.value, sizeof(state.value));
+    memcpy(snapshot->effect_enabled, state.effect_on, sizeof(state.effect_on));
+    snapshot->source = state.source;
+    snapshot->mode = state.mode;
+    for(i = 0; i < TARGET_COUNT; ++i) {
+        snapshot->lfo_rate[i] = state.lfo[i].rate;
+        snapshot->lfo_depth[i] = state.lfo[i].depth;
+        snapshot->lfo_wave[i] = state.lfo[i].wave;
+        snapshot->lfo_enabled[i] = state.lfo[i].enabled;
+    }
+}
 
 static bool is_metal_theme(void)
 {
@@ -885,6 +945,7 @@ static void source_event(lv_event_t *event)
     if(source != SOURCE_MIC) mic_ready = false;
     set_status(source == SOURCE_I2S ? "I2S input selected" : "Oscillator source selected");
     refresh_ui();
+    notify_state_changed();
 }
 
 static void mic_event(lv_event_t *event)
@@ -903,6 +964,8 @@ static void mic_event(lv_event_t *event)
         set_status(mic_ready ? "MIC sample captured and ready" : "MIC hold was too short; sample discarded");
     }
     refresh_ui();
+    notify_state_changed();
+    notify_mic_recording_changed(mic_recording);
 }
 
 static void page_event(lv_event_t *event)
@@ -947,6 +1010,7 @@ static void rotary_event(lv_event_t *event)
     set_status(knob->role == ROTARY_AMP ? "Amplifier parameter selected" :
                (knob->role == ROTARY_FX ? "Effect parameter selected" : "LFO parameter selected"));
     refresh_ui();
+    if(code == LV_EVENT_VALUE_CHANGED) notify_state_changed();
 }
 
 static void effect_event(lv_event_t *event)
@@ -959,6 +1023,7 @@ static void effect_event(lv_event_t *event)
     animate_control_updates = true;
     set_status(state.effect_on[effect] ? "Effect enabled; parameters ready" : "Effect bypassed; parameters remain editable");
     refresh_ui();
+    notify_state_changed();
 }
 
 static void lfo_power_event(lv_event_t *event)
@@ -969,6 +1034,7 @@ static void lfo_power_event(lv_event_t *event)
     animate_control_updates = true;
     set_status(state.lfo[current_target].enabled ? "LFO enabled for current target" : "LFO bypassed for current target");
     refresh_ui();
+    notify_state_changed();
 }
 
 static void update_fader_cap_geometry(int value)
@@ -1011,6 +1077,7 @@ static void slider_event(lv_event_t *event)
     *edited_value() = (uint8_t)value;
     animate_control_updates = false;
     refresh_ui();
+    notify_state_changed();
 }
 
 static void mode_event(lv_event_t *event)
@@ -1018,6 +1085,15 @@ static void mode_event(lv_event_t *event)
     state.mode = (uint8_t)(intptr_t)lv_event_get_user_data(event);
     set_status(state.mode == 0 ? "XY pitch quantized to semitones" : "XY pitch is continuous");
     refresh_ui();
+    notify_state_changed();
+}
+
+static void join_dirty_area(lv_area_t *destination, const lv_area_t *area)
+{
+    destination->x1 = LV_MIN(destination->x1, area->x1);
+    destination->y1 = LV_MIN(destination->y1, area->y1);
+    destination->x2 = LV_MAX(destination->x2, area->x2);
+    destination->y2 = LV_MAX(destination->y2, area->y2);
 }
 
 static void xy_event(lv_event_t *event)
@@ -1028,12 +1104,41 @@ static void xy_event(lv_event_t *event)
     int y;
     int pitch_tenths;
     char text[48];
+    if(lv_event_get_code(event) == LV_EVENT_RELEASED || lv_event_get_code(event) == LV_EVENT_PRESS_LOST) {
+        if(!lv_obj_has_flag(xy_marker, LV_OBJ_FLAG_HIDDEN)) {
+            lv_obj_get_coords(xy_marker, &xy_marker_dirty_area);
+            lv_area_increase(&xy_marker_dirty_area, 12, 12);
+            xy_marker_visual_dirty = true;
+            lv_obj_add_flag(xy_marker, LV_OBJ_FLAG_HIDDEN);
+        }
+        notify_xy_note_changed(0.0f, false);
+        return;
+    }
     if(lv_event_get_code(event) != LV_EVENT_PRESSED && lv_event_get_code(event) != LV_EVENT_PRESSING) return;
     lv_indev_get_point(lv_indev_active(), &point);
     lv_obj_get_content_coords(lv_event_get_target_obj(event), &area);
+    if(!lv_obj_has_flag(xy_marker, LV_OBJ_FLAG_HIDDEN)) {
+        lv_area_t old_area;
+        lv_obj_get_coords(xy_marker, &old_area);
+        lv_area_increase(&old_area, 12, 12);
+        if(xy_marker_visual_dirty) join_dirty_area(&xy_marker_dirty_area, &old_area);
+        else xy_marker_dirty_area = old_area;
+    }
     x = LV_CLAMP(10, point.x - area.x1, lv_area_get_width(&area) - 10);
     y = LV_CLAMP(10, point.y - area.y1, lv_area_get_height(&area) - 10);
+    lv_obj_remove_flag(xy_marker, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_pos(xy_marker, x - 10, y - 10);
+    {
+        lv_area_t new_area = {
+            .x1 = area.x1 + x - 22,
+            .y1 = area.y1 + y - 22,
+            .x2 = area.x1 + x + 22,
+            .y2 = area.y1 + y + 22,
+        };
+        if(xy_marker_visual_dirty) join_dirty_area(&xy_marker_dirty_area, &new_area);
+        else xy_marker_dirty_area = new_area;
+        xy_marker_visual_dirty = true;
+    }
     pitch_tenths = 480 + (x * 480) / lv_area_get_width(&area);
     if(state.mode == 0) {
         int midi_note = (pitch_tenths + 5) / 10;
@@ -1042,6 +1147,8 @@ static void xy_event(lv_event_t *event)
         lv_snprintf(text, sizeof(text), "MIDI %02d.%d  /  CONTINUOUS", pitch_tenths / 10, pitch_tenths % 10);
     }
     lv_label_set_text(xy_readout, text);
+    xy_readout_visual_dirty = true;
+    notify_xy_note_changed(state.mode == 0 ? (float)((pitch_tenths + 5) / 10) : (float)pitch_tenths / 10.0f, true);
 }
 
 static uint32_t shade_color(uint32_t color, int progress, int darken_percent)
@@ -1082,6 +1189,13 @@ static void key_press_anim_exec(void *object, int32_t progress)
 static void animate_key_press(piano_key_t *key, bool down)
 {
     int target = down ? 1000 : 0;
+#if defined(LVGL_SYNTH_EMBEDDED)
+    lv_anim_delete(key, key_press_anim_exec);
+    if(key->press_progress == target) return;
+    key->visual_dirty = true;
+    apply_key_press(key, target);
+    return;
+#else
     lv_anim_t animation;
 
     lv_anim_delete(key, key_press_anim_exec);
@@ -1093,6 +1207,7 @@ static void animate_key_press(piano_key_t *key, bool down)
     lv_anim_set_duration(&animation, down ? 70 : 105);
     lv_anim_set_path_cb(&animation, down ? lv_anim_path_ease_out : lv_anim_path_ease_in_out);
     lv_anim_start(&animation);
+#endif
 }
 
 static void key_event(lv_event_t *event)
@@ -1100,9 +1215,131 @@ static void key_event(lv_event_t *event)
     piano_key_t *key = (piano_key_t *)lv_event_get_user_data(event);
     lv_event_code_t code = lv_event_get_code(event);
 
-    if(code == LV_EVENT_PRESSED) animate_key_press(key, true);
-    else if(code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) animate_key_press(key, false);
+    if(code == LV_EVENT_PRESSED) {
+        animate_key_press(key, true);
+        float output_note = (float)key->midi_note;
+#ifdef LVGL_SYNTH_EMBEDDED
+        output_note += 12.0f;
+#endif
+        notify_note_changed(output_note, true);
+    } else if(code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+        animate_key_press(key, false);
+        float output_note = (float)key->midi_note;
+#ifdef LVGL_SYNTH_EMBEDDED
+        output_note += 12.0f;
+#endif
+        notify_note_changed(output_note, false);
+    }
 }
+
+#if defined(LVGL_SYNTH_EMBEDDED)
+static float key_output_note(const piano_key_t *key)
+{
+    return (float)key->midi_note + 12.0f;
+}
+
+static piano_key_t *keyboard_key_at(const lv_point_t *point)
+{
+    lv_area_t keyboard_area;
+    int i;
+
+    lv_obj_get_content_coords(keyboard_panel, &keyboard_area);
+    for(i = 0; i < 10; ++i) {
+        piano_key_t *key = &black_keys[i];
+        int x = point->x - keyboard_area.x1;
+        int y = point->y - keyboard_area.y1;
+        if(x >= key->x && x < key->x + key->width &&
+           y >= key->y && y < key->y + key->height) return key;
+    }
+    for(i = 0; i < 15; ++i) {
+        piano_key_t *key = &white_keys[i];
+        int x = point->x - keyboard_area.x1;
+        int y = point->y - keyboard_area.y1;
+        if(x >= key->x && x < key->x + key->width &&
+           y >= key->y && y < key->y + key->height) return key;
+    }
+    return NULL;
+}
+
+static keyboard_gesture_t *keyboard_gesture_for(lv_indev_t *indev, bool allocate)
+{
+    keyboard_gesture_t *free_slot = NULL;
+    int i;
+
+    for(i = 0; i < 5; ++i) {
+        if(keyboard_gestures[i].indev == indev) return &keyboard_gestures[i];
+        if(free_slot == NULL && keyboard_gestures[i].indev == NULL) free_slot = &keyboard_gestures[i];
+    }
+    if(allocate && free_slot != NULL) {
+        free_slot->indev = indev;
+        free_slot->midi_note = -1;
+        return free_slot;
+    }
+    return NULL;
+}
+
+static piano_key_t *keyboard_key_for_note(int16_t midi_note)
+{
+    int i;
+    for(i = 0; i < 10; ++i) {
+        if(black_keys[i].midi_note == midi_note) return &black_keys[i];
+    }
+    for(i = 0; i < 15; ++i) {
+        if(white_keys[i].midi_note == midi_note) return &white_keys[i];
+    }
+    return NULL;
+}
+
+static void keyboard_release_gesture(keyboard_gesture_t *gesture)
+{
+    piano_key_t *key;
+    if(gesture == NULL) return;
+    key = keyboard_key_for_note(gesture->midi_note);
+    if(key != NULL) {
+        animate_key_press(key, false);
+        notify_note_changed(key_output_note(key), false);
+    }
+    gesture->indev = NULL;
+    gesture->midi_note = -1;
+}
+
+static void keyboard_swipe_event(lv_event_t *event)
+{
+    lv_event_code_t code = lv_event_get_code(event);
+    lv_indev_t *indev = lv_indev_active();
+    keyboard_gesture_t *gesture;
+    piano_key_t *key;
+    lv_point_t point;
+
+    if(indev == NULL) return;
+    if(code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+        keyboard_release_gesture(keyboard_gesture_for(indev, false));
+        return;
+    }
+    if(code != LV_EVENT_PRESSED && code != LV_EVENT_PRESSING) return;
+
+    gesture = keyboard_gesture_for(indev, true);
+    if(gesture == NULL) return;
+    lv_indev_get_point(indev, &point);
+    key = keyboard_key_at(&point);
+    if(key == NULL) {
+        keyboard_release_gesture(gesture);
+        return;
+    }
+    if(gesture->midi_note == key->midi_note) return;
+
+    if(gesture->midi_note >= 0) {
+        piano_key_t *old_key = keyboard_key_for_note(gesture->midi_note);
+        if(old_key != NULL) {
+            animate_key_press(old_key, false);
+            notify_note_changed(key_output_note(old_key), false);
+        }
+    }
+    gesture->midi_note = key->midi_note;
+    animate_key_press(key, true);
+    notify_note_changed(key_output_note(key), true);
+}
+#endif
 
 static void default_patch(synth_state_t *patch)
 {
@@ -1118,8 +1355,8 @@ static void default_patch(synth_state_t *patch)
     memcpy(patch->value, defaults, sizeof(defaults));
     patch->source = SOURCE_SINE;
     patch->mode = 1;
-    patch->effect_on[FX_DELAY] = true;
-    patch->effect_on[FX_CHORUS] = true;
+    patch->effect_on[FX_DELAY] = false;
+    patch->effect_on[FX_CHORUS] = false;
     for(i = 0; i < TARGET_COUNT; ++i) {
         patch->lfo[i].rate = 35;
         patch->lfo[i].depth = 45;
@@ -1195,6 +1432,7 @@ static void bank_event(lv_event_t *event)
     }
     animate_control_updates = true;
     refresh_ui();
+    notify_state_changed();
 }
 
 static void refresh_ui(void)
@@ -1843,6 +2081,7 @@ static void create_xy(lv_obj_t *screen)
         lv_obj_set_pos(xy_readout, 330, 14);
     }
     pad = lv_obj_create(container);
+    xy_pad = pad;
     lv_obj_set_pos(pad, 14, 40);
     lv_obj_set_size(pad, 566, 304);
     lv_obj_set_style_bg_color(pad, col(0x0d100d), 0);
@@ -1912,8 +2151,13 @@ static void create_xy(lv_obj_t *screen)
         make_rect(xy_marker, 8, 2, 2, 14, CY_AMBER);
     }
     lv_obj_remove_flag(xy_marker, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(xy_marker, LV_OBJ_FLAG_HIDDEN);
+    xy_marker_visual_dirty = false;
+    xy_readout_visual_dirty = false;
     lv_obj_add_event_cb(pad, xy_event, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(pad, xy_event, LV_EVENT_PRESSING, NULL);
+    lv_obj_add_event_cb(pad, xy_event, LV_EVENT_RELEASED, NULL);
+    lv_obj_add_event_cb(pad, xy_event, LV_EVENT_PRESS_LOST, NULL);
     mode_buttons[0] = make_button(container, "SEMITONE", 14, 356, 150, 38, mode_event, 0);
     mode_buttons[1] = make_button(container, "CONTINUOUS", 174, 356, 164, 38, mode_event, 1);
     {
@@ -1925,9 +2169,19 @@ static void create_xy(lv_obj_t *screen)
 static void create_keyboard(lv_obj_t *screen)
 {
     static const int black_after[10] = {0, 1, 3, 4, 5, 7, 8, 10, 11, 12};
+    static const int white_semitones[7] = {0, 2, 4, 5, 7, 9, 11};
+    static const int black_semitones[5] = {1, 3, 6, 8, 10};
     lv_obj_t *keyboard = make_panel(screen, 14, 545, 1252, 162);
     const int white_width = 81;
     int i;
+    keyboard_panel = keyboard;
+#if defined(LVGL_SYNTH_EMBEDDED)
+    for(i = 0; i < 5; ++i) {
+        keyboard_gestures[i].indev = NULL;
+        keyboard_gestures[i].midi_note = -1;
+    }
+    lv_obj_add_flag(keyboard, LV_OBJ_FLAG_CLICKABLE);
+#endif
     lv_obj_set_style_bg_color(keyboard, col(0x0c0d0b), 0);
     if(is_metal_theme()) {
         lv_obj_set_style_bg_color(keyboard, lv_color_hex(0x242d32), 0);
@@ -1980,6 +2234,8 @@ static void create_keyboard(lv_obj_t *screen)
         key_state->width = white_width - 3;
         key_state->height = 136;
         key_state->press_progress = 0;
+        key_state->visual_dirty = false;
+        key_state->midi_note = (int16_t)(48 + (i / 7) * 12 + white_semitones[i % 7]);
         key_state->black = false;
         lv_obj_set_pos(key, 17 + i * white_width, 13);
         lv_obj_set_size(key, white_width - 3, 136);
@@ -2008,9 +2264,13 @@ static void create_keyboard(lv_obj_t *screen)
             lv_obj_set_style_shadow_ofs_y(key, 4, 0);
             lv_obj_set_style_shadow_opa(key, LV_OPA_80, 0);
         }
+#if defined(LVGL_SYNTH_EMBEDDED)
+        lv_obj_remove_flag(key, LV_OBJ_FLAG_CLICKABLE);
+#else
         lv_obj_add_event_cb(key, key_event, LV_EVENT_PRESSED, key_state);
         lv_obj_add_event_cb(key, key_event, LV_EVENT_RELEASED, key_state);
         lv_obj_add_event_cb(key, key_event, LV_EVENT_PRESS_LOST, key_state);
+#endif
     }
     for(i = 0; i < 10; ++i) {
         piano_key_t *key_state = &black_keys[i];
@@ -2021,6 +2281,8 @@ static void create_keyboard(lv_obj_t *screen)
         key_state->width = 49;
         key_state->height = 86;
         key_state->press_progress = 0;
+        key_state->visual_dirty = false;
+        key_state->midi_note = (int16_t)(48 + (i / 5) * 12 + black_semitones[i % 5]);
         key_state->black = true;
         lv_obj_set_pos(key, 17 + (black_after[i] + 1) * white_width - 25, 13);
         lv_obj_set_size(key, 49, 86);
@@ -2049,14 +2311,32 @@ static void create_keyboard(lv_obj_t *screen)
             lv_obj_set_style_shadow_ofs_y(key, 6, 0);
             lv_obj_set_style_shadow_opa(key, LV_OPA_80, 0);
         }
+#if defined(LVGL_SYNTH_EMBEDDED)
+        lv_obj_remove_flag(key, LV_OBJ_FLAG_CLICKABLE);
+#else
         lv_obj_add_event_cb(key, key_event, LV_EVENT_PRESSED, key_state);
         lv_obj_add_event_cb(key, key_event, LV_EVENT_RELEASED, key_state);
         lv_obj_add_event_cb(key, key_event, LV_EVENT_PRESS_LOST, key_state);
+#endif
     }
+#if defined(LVGL_SYNTH_EMBEDDED)
+    lv_obj_add_event_cb(keyboard, keyboard_swipe_event, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(keyboard, keyboard_swipe_event, LV_EVENT_PRESSING, NULL);
+    lv_obj_add_event_cb(keyboard, keyboard_swipe_event, LV_EVENT_RELEASED, NULL);
+    lv_obj_add_event_cb(keyboard, keyboard_swipe_event, LV_EVENT_PRESS_LOST, NULL);
+#endif
 }
 
 static void create_background(lv_obj_t *screen)
 {
+#if defined(LVGL_SYNTH_EMBEDDED)
+    int x;
+    make_rect(screen, 0, 0, 1280, 720, C_WOOD);
+    for(x = 0; x < 1280; x += 80) {
+        lv_obj_t *grain = make_rect(screen, x, 0, 3, 720, (x / 80) % 2 ? 0x6b3820 : 0x452112);
+        lv_obj_set_style_bg_opa(grain, LV_OPA_30, 0);
+    }
+#else
     lv_obj_t *background = lv_image_create(screen);
     const char *source = "A:/assets/walnut-background.png";
     if(current_theme == LVGL_SYNTH_THEME_METAL) {
@@ -2068,6 +2348,7 @@ static void create_background(lv_obj_t *screen)
     lv_obj_set_pos(background, 0, 0);
     lv_obj_set_size(background, 1280, 720);
     lv_obj_remove_flag(background, LV_OBJ_FLAG_CLICKABLE);
+#endif
 }
 
 void lvgl_synth_ui_create(void)
@@ -2092,4 +2373,43 @@ void lvgl_synth_ui_create(void)
     create_xy(screen);
     create_keyboard(screen);
     refresh_ui();
+}
+
+void lvgl_synth_ui_invalidate_performance(void)
+{
+    if(xy_marker != NULL) lv_obj_invalidate(lv_obj_get_parent(xy_marker));
+    if(keyboard_panel != NULL) lv_obj_invalidate(keyboard_panel);
+}
+
+void lvgl_synth_ui_invalidate_dirty_keys(void)
+{
+    lv_area_t keyboard_area;
+    int i;
+    if(keyboard_panel == NULL) return;
+    lv_obj_get_content_coords(keyboard_panel, &keyboard_area);
+    for(i = 0; i < 25; ++i) {
+        piano_key_t *key = i < 15 ? &white_keys[i] : &black_keys[i - 15];
+        lv_area_t area;
+        if(!key->visual_dirty) continue;
+        area.x1 = keyboard_area.x1 + key->x - 10;
+        area.y1 = keyboard_area.y1 + key->y - 10;
+        area.x2 = keyboard_area.x1 + key->x + key->width + 10;
+        area.y2 = keyboard_area.y1 + key->y + key->height + 10;
+        lv_obj_invalidate_area(keyboard_panel, &area);
+        key->visual_dirty = false;
+    }
+}
+
+void lvgl_synth_ui_invalidate_dirty_xy(void)
+{
+    if(xy_marker_visual_dirty) {
+        // Rebuild the pad once from its final state. This guarantees that any
+        // previously displayed marker is erased and only the latest one is drawn.
+        lv_obj_invalidate(xy_pad);
+        xy_marker_visual_dirty = false;
+    }
+    if(xy_readout_visual_dirty && xy_readout != NULL) {
+        lv_obj_invalidate(xy_readout);
+        xy_readout_visual_dirty = false;
+    }
 }

@@ -12,6 +12,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 
 class AudioEngine {
  public:
@@ -69,6 +72,19 @@ class AudioEngine {
   [[nodiscard]] float filterMixNormalized() const;
 
  private:
+  class ScopedLock {
+   public:
+    explicit ScopedLock(SemaphoreHandle_t mutex) : mutex_(mutex) {
+      if (mutex_ != nullptr) xSemaphoreTakeRecursive(mutex_, portMAX_DELAY);
+    }
+    ~ScopedLock() {
+      if (mutex_ != nullptr) xSemaphoreGiveRecursive(mutex_);
+    }
+
+   private:
+    SemaphoreHandle_t mutex_;
+  };
+
   struct PendingDelayEvent {
     bool active = false;
     std::uint32_t fire_ms = 0;
@@ -90,6 +106,8 @@ class AudioEngine {
   static float noteValueToFrequency(float note_value);
   static float normalizedToMilliseconds(float normalized, float max_ms);
   static float millisecondsToNormalized(float value_ms, float max_ms);
+  static void audioTaskEntry(void* context);
+  void processAudio();
   AudioSource& sourceFor(AudioSourceType source_type);
   const AudioSource& sourceFor(AudioSourceType source_type) const;
   void applyVoiceLevel(std::size_t voice_index, float envelope_value, Waveform waveform);
@@ -150,4 +168,6 @@ class AudioEngine {
   std::array<std::uint32_t, SynthConfig::audio.polyphony_voices> chorus_last_retune_ms_{};
   std::array<PendingDelayEvent, SynthConfig::audio.polyphony_voices * 4> pending_delay_events_{};
   std::array<PendingVoiceOff, SynthConfig::audio.polyphony_voices * 2> pending_voice_off_{};
+  SemaphoreHandle_t mutex_ = nullptr;
+  TaskHandle_t audio_task_ = nullptr;
 };

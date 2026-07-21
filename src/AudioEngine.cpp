@@ -18,6 +18,17 @@ constexpr float kChorusRetuneThresholdSemitone = 0.004f;
 }
 
 void AudioEngine::begin() {
+  mutex_ = xSemaphoreCreateRecursiveMutex();
+  auto speaker_config = M5.Speaker.config();
+  M5.Speaker.end();
+  // Channel gain is sampled once per DMA block by M5Unified. Keep blocks short
+  // enough that ADSR changes do not become audible steps at note onset.
+  speaker_config.dma_buf_len = 256;
+  speaker_config.dma_buf_count = 16;
+  speaker_config.task_priority = 12;
+  speaker_config.task_pinned_core = 0;
+  M5.Speaker.config(speaker_config);
+  M5.Speaker.begin();
   M5.Speaker.setVolume(SynthConfig::audio.speaker_volume);
   amp_envelope_.attack_seconds = SynthConfig::audio.amp_attack_default_ms / 1000.0f;
   amp_envelope_.decay_seconds = SynthConfig::audio.amp_decay_default_ms / 1000.0f;
@@ -40,9 +51,24 @@ void AudioEngine::begin() {
   onboard_mic_source_.setVolume(volume_);
   external_i2s_source_.setVolume(volume_);
   last_envelope_update_ms_ = millis();
+  xTaskCreatePinnedToCore(audioTaskEntry, "synth_audio", 6144, this, 10, &audio_task_, 0);
 }
 
 void AudioEngine::update() {
+  // Audio processing runs independently on core 0.
+}
+
+void AudioEngine::audioTaskEntry(void* context) {
+  auto* engine = static_cast<AudioEngine*>(context);
+  TickType_t wake_time = xTaskGetTickCount();
+  for (;;) {
+    engine->processAudio();
+    vTaskDelayUntil(&wake_time, pdMS_TO_TICKS(1));
+  }
+}
+
+void AudioEngine::processAudio() {
+  ScopedLock lock(mutex_);
   const std::uint32_t now = millis();
   const float delta_seconds = std::min(0.05f, static_cast<float>(now - last_envelope_update_ms_) / 1000.0f);
   last_envelope_update_ms_ = now;
@@ -69,6 +95,7 @@ void AudioEngine::update() {
 }
 
 void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Waveform waveform) {
+  ScopedLock lock(mutex_);
   AudioSource& source = sourceFor(active_source_type_);
   if (active_source_type_ == AudioSourceType::ExternalI2S) {
     if (!source.isAvailable()) {
@@ -274,6 +301,20 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
     chorus_last_retune_ms_[voice_index] = millis();
   }
 
+  bool starts_new_voice = false;
+  for (std::size_t j = 0; j < clamped_count; ++j) {
+    starts_new_voice = starts_new_voice || assigned_voice_indices[j] == npos;
+  }
+  if (starts_new_voice) {
+    for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
+      if (!voice_active_[i]) {
+        source.setVoiceLevel(i, 0.0f, waveform);
+      }
+    }
+    // Let the mixer consume one silent DMA block before it sees a new wave.
+    delay(6);
+  }
+
   for (std::size_t j = 0; j < clamped_count; ++j) {
     if (assigned_voice_indices[j] != npos) {
       continue;
@@ -310,6 +351,7 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
 }
 
 void AudioEngine::noteOff() {
+  ScopedLock lock(mutex_);
   if (active_source_type_ == AudioSourceType::ExternalI2S) {
     // Keep monitoring while External I2S source is selected.
     return;
@@ -323,6 +365,7 @@ void AudioEngine::noteOff() {
 }
 
 void AudioEngine::setVolume(float volume) {
+  ScopedLock lock(mutex_);
   volume_ = std::clamp(volume, 0.0f, 1.0f);
   oscillator_source_.setVolume(volume_);
   onboard_mic_source_.setVolume(volume_);
@@ -330,6 +373,7 @@ void AudioEngine::setVolume(float volume) {
 }
 
 void AudioEngine::setSourceType(AudioSourceType source_type) {
+  ScopedLock lock(mutex_);
   if (active_source_type_ == source_type) {
     if (source_type == AudioSourceType::ExternalI2S) {
       sourceFor(active_source_type_).noteOn(0, 0.0f, 0.0f, active_waveform_);
@@ -345,36 +389,59 @@ void AudioEngine::setSourceType(AudioSourceType source_type) {
 }
 
 void AudioEngine::setAttackNormalized(float normalized) {
-  amp_envelope_.attack_seconds = normalizedToMilliseconds(normalized, SynthConfig::audio.amp_attack_max_ms) / 1000.0f;
+  ScopedLock lock(mutex_);
+  const float next = normalizedToMilliseconds(normalized, SynthConfig::audio.amp_attack_max_ms) / 1000.0f;
+  if (std::fabs(next - amp_envelope_.attack_seconds) < 0.0005f) {
+    return;
+  }
+  amp_envelope_.attack_seconds = next;
   applyEnvelopeSettings();
 }
 
 void AudioEngine::setDecayNormalized(float normalized) {
-  amp_envelope_.decay_seconds = normalizedToMilliseconds(normalized, SynthConfig::audio.amp_decay_max_ms) / 1000.0f;
+  ScopedLock lock(mutex_);
+  const float next = normalizedToMilliseconds(normalized, SynthConfig::audio.amp_decay_max_ms) / 1000.0f;
+  if (std::fabs(next - amp_envelope_.decay_seconds) < 0.0005f) {
+    return;
+  }
+  amp_envelope_.decay_seconds = next;
   applyEnvelopeSettings();
 }
 
 void AudioEngine::setSustainNormalized(float normalized) {
-  amp_envelope_.sustain_level = std::clamp(normalized, 0.0f, 1.0f);
+  ScopedLock lock(mutex_);
+  const float next = std::clamp(normalized, 0.0f, 1.0f);
+  if (std::fabs(next - amp_envelope_.sustain_level) < 0.0005f) {
+    return;
+  }
+  amp_envelope_.sustain_level = next;
   applyEnvelopeSettings();
 }
 
 void AudioEngine::setReleaseNormalized(float normalized) {
-  amp_envelope_.release_seconds = normalizedToMilliseconds(normalized, SynthConfig::audio.amp_release_max_ms) / 1000.0f;
+  ScopedLock lock(mutex_);
+  const float next = normalizedToMilliseconds(normalized, SynthConfig::audio.amp_release_max_ms) / 1000.0f;
+  if (std::fabs(next - amp_envelope_.release_seconds) < 0.0005f) {
+    return;
+  }
+  amp_envelope_.release_seconds = next;
   applyEnvelopeSettings();
 }
 
 void AudioEngine::setDelayEnabled(bool enabled) {
+  ScopedLock lock(mutex_);
   delay_enabled_ = enabled;
 }
 
 void AudioEngine::setDelayParameters(float time_normalized, float feedback_normalized, float mix_normalized) {
+  ScopedLock lock(mutex_);
   delay_time_normalized_ = std::clamp(time_normalized, 0.0f, 1.0f);
   delay_feedback_normalized_ = std::clamp(feedback_normalized, 0.0f, 1.0f);
   delay_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
 }
 
 void AudioEngine::setChorusEnabled(bool enabled) {
+  ScopedLock lock(mutex_);
   if (chorus_enabled_ == enabled) {
     return;
   }
@@ -404,12 +471,14 @@ void AudioEngine::setChorusEnabled(bool enabled) {
 }
 
 void AudioEngine::setChorusParameters(float rate_normalized, float depth_normalized, float mix_normalized) {
+  ScopedLock lock(mutex_);
   chorus_rate_normalized_ = std::clamp(rate_normalized, 0.0f, 1.0f);
   chorus_depth_normalized_ = std::clamp(depth_normalized, 0.0f, 1.0f);
   chorus_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
 }
 
 void AudioEngine::setFilterEnabled(bool enabled) {
+  ScopedLock lock(mutex_);
   if (filter_enabled_ == enabled) {
     return;
   }
@@ -419,14 +488,26 @@ void AudioEngine::setFilterEnabled(bool enabled) {
 }
 
 void AudioEngine::setFilterParameters(float cutoff_normalized, float resonance_normalized, float mix_normalized) {
-  filter_cutoff_normalized_ = std::clamp(cutoff_normalized, 0.0f, 1.0f);
-  filter_resonance_normalized_ = std::clamp(resonance_normalized, 0.0f, 1.0f);
-  filter_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+  ScopedLock lock(mutex_);
+  const float next_cutoff = std::clamp(cutoff_normalized, 0.0f, 1.0f);
+  const float next_resonance = std::clamp(resonance_normalized, 0.0f, 1.0f);
+  const float next_mix = std::clamp(mix_normalized, 0.0f, 1.0f);
+  if (std::fabs(next_cutoff - filter_cutoff_normalized_) < 0.0005f &&
+      std::fabs(next_resonance - filter_resonance_normalized_) < 0.0005f &&
+      std::fabs(next_mix - filter_mix_normalized_) < 0.0005f) {
+    return;
+  }
+  filter_cutoff_normalized_ = next_cutoff;
+  filter_resonance_normalized_ = next_resonance;
+  filter_mix_normalized_ = next_mix;
   oscillator_source_.setFilterParameters(filter_cutoff_normalized_, filter_resonance_normalized_, filter_mix_normalized_);
-  refreshOscillatorVoicesTimbre();
+  if (filter_enabled_ && filter_mix_normalized_ > 0.0f) {
+    refreshOscillatorVoicesTimbre();
+  }
 }
 
 void AudioEngine::setDistortionEnabled(bool enabled) {
+  ScopedLock lock(mutex_);
   if (distortion_enabled_ == enabled) {
     return;
   }
@@ -436,15 +517,27 @@ void AudioEngine::setDistortionEnabled(bool enabled) {
 }
 
 void AudioEngine::setDistortionParameters(float drive_normalized, float tone_normalized, float mix_normalized) {
-  distortion_drive_normalized_ = std::clamp(drive_normalized, 0.0f, 1.0f);
-  distortion_tone_normalized_ = std::clamp(tone_normalized, 0.0f, 1.0f);
-  distortion_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+  ScopedLock lock(mutex_);
+  const float next_drive = std::clamp(drive_normalized, 0.0f, 1.0f);
+  const float next_tone = std::clamp(tone_normalized, 0.0f, 1.0f);
+  const float next_mix = std::clamp(mix_normalized, 0.0f, 1.0f);
+  if (std::fabs(next_drive - distortion_drive_normalized_) < 0.0005f &&
+      std::fabs(next_tone - distortion_tone_normalized_) < 0.0005f &&
+      std::fabs(next_mix - distortion_mix_normalized_) < 0.0005f) {
+    return;
+  }
+  distortion_drive_normalized_ = next_drive;
+  distortion_tone_normalized_ = next_tone;
+  distortion_mix_normalized_ = next_mix;
   oscillator_source_.setDistortionParameters(distortion_drive_normalized_, distortion_tone_normalized_,
                                              distortion_mix_normalized_);
-  refreshOscillatorVoicesTimbre();
+  if (distortion_enabled_ && distortion_mix_normalized_ > 0.0f) {
+    refreshOscillatorVoicesTimbre();
+  }
 }
 
 void AudioEngine::setBitcrusherEnabled(bool enabled) {
+  ScopedLock lock(mutex_);
   if (bitcrusher_enabled_ == enabled) {
     return;
   }
@@ -454,15 +547,27 @@ void AudioEngine::setBitcrusherEnabled(bool enabled) {
 }
 
 void AudioEngine::setBitcrusherParameters(float bits_normalized, float rate_normalized, float mix_normalized) {
-  bitcrusher_bits_normalized_ = std::clamp(bits_normalized, 0.0f, 1.0f);
-  bitcrusher_rate_normalized_ = std::clamp(rate_normalized, 0.0f, 1.0f);
-  bitcrusher_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+  ScopedLock lock(mutex_);
+  const float next_bits = std::clamp(bits_normalized, 0.0f, 1.0f);
+  const float next_rate = std::clamp(rate_normalized, 0.0f, 1.0f);
+  const float next_mix = std::clamp(mix_normalized, 0.0f, 1.0f);
+  if (std::fabs(next_bits - bitcrusher_bits_normalized_) < 0.0005f &&
+      std::fabs(next_rate - bitcrusher_rate_normalized_) < 0.0005f &&
+      std::fabs(next_mix - bitcrusher_mix_normalized_) < 0.0005f) {
+    return;
+  }
+  bitcrusher_bits_normalized_ = next_bits;
+  bitcrusher_rate_normalized_ = next_rate;
+  bitcrusher_mix_normalized_ = next_mix;
   oscillator_source_.setBitcrusherParameters(bitcrusher_bits_normalized_, bitcrusher_rate_normalized_,
                                              bitcrusher_mix_normalized_);
-  refreshOscillatorVoicesTimbre();
+  if (bitcrusher_enabled_ && bitcrusher_mix_normalized_ > 0.0f) {
+    refreshOscillatorVoicesTimbre();
+  }
 }
 
 bool AudioEngine::beginMicSampleRecording() {
+  ScopedLock lock(mutex_);
   stopAllImmediately();
   const bool started = onboard_mic_source_.beginRecording();
   if (started) {
@@ -472,10 +577,12 @@ bool AudioEngine::beginMicSampleRecording() {
 }
 
 void AudioEngine::updateMicSampleRecording() {
+  ScopedLock lock(mutex_);
   onboard_mic_source_.updateRecording();
 }
 
 bool AudioEngine::finishMicSampleRecording(bool commit_sample) {
+  ScopedLock lock(mutex_);
   const bool recorded = onboard_mic_source_.finishRecording(commit_sample);
   if (recorded) {
     active_source_type_ = AudioSourceType::OnboardMic;
@@ -484,6 +591,7 @@ bool AudioEngine::finishMicSampleRecording(bool commit_sample) {
 }
 
 bool AudioEngine::recordMicSample() {
+  ScopedLock lock(mutex_);
   stopAllImmediately();
   const bool recorded = onboard_mic_source_.recordSample();
   if (recorded) {
@@ -822,34 +930,10 @@ void AudioEngine::triggerDelayEvent(const PendingDelayEvent& event, std::uint32_
 }
 
 void AudioEngine::processChorus(std::uint32_t now_ms, float delta_seconds) {
-  if (!chorus_enabled_ || chorus_mix_normalized_ <= 0.0f || active_source_type_ != AudioSourceType::Oscillator) {
-    return;
-  }
-  AudioSource& source = sourceFor(active_source_type_);
-  const float rate_hz = 0.10f + (chorus_rate_normalized_ * 7.5f);
-  const float depth_semitones = (0.02f + 1.20f * chorus_depth_normalized_) * chorus_mix_normalized_;
-
-  for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
-    if (!voice_active_[i] || !voice_held_[i] || voice_is_delay_[i]) {
-      continue;
-    }
-    chorus_phase_[i] += delta_seconds * rate_hz * kTwoPi;
-    if (chorus_phase_[i] > kTwoPi) {
-      chorus_phase_[i] = std::fmod(chorus_phase_[i], kTwoPi);
-    }
-    const float stereo_offset = static_cast<float>(i) * 0.9f;
-    const float mod_note = active_note_values_[i] + std::sinf(chorus_phase_[i] + stereo_offset) * depth_semitones;
-    if ((now_ms - chorus_last_retune_ms_[i]) < kChorusRetuneMinMs &&
-        std::fabs(mod_note - chorus_last_note_value_[i]) < kChorusRetuneThresholdSemitone) {
-      continue;
-    }
-    const float mod_freq = noteValueToFrequency(mod_note);
-    if (!source.noteOn(i, mod_note, mod_freq, active_waveform_)) {
-      continue;
-    }
-    chorus_last_retune_ms_[i] = now_ms;
-    chorus_last_note_value_[i] = mod_note;
-  }
+  // Reissuing tone() for pitch modulation restarts the M5 speaker channel and
+  // produces periodic clicks. Keep chorus bypassed until it has a buffer-based DSP path.
+  (void)now_ms;
+  (void)delta_seconds;
 }
 
 void AudioEngine::refreshOscillatorVoicesTimbre() {

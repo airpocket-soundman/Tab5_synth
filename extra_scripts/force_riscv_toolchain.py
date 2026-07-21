@@ -65,3 +65,6 @@ if root is not None:
         set_tool("AR", bin_dir, "riscv32-esp-elf-gcc-ar.exe")
         set_tool("RANLIB", bin_dir, "riscv32-esp-elf-gcc-ranlib.exe")
         set_tool("SIZETOOL", bin_dir, "riscv32-esp-elf-size.exe")
+        # PlatformIO invokes GNU as directly for library .S files. Match the
+        # ESP32-P4 floating-point ABI used by the Arduino framework objects.
+        env.AppendUnique(ASFLAGS=["-march=rv32imafc_zicsr_zifencei", "-mabi=ilp32f"])

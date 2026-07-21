@@ -9,19 +9,21 @@
 namespace SynthConfig {
 
 struct AudioConfig {
-  int speaker_volume = 180;
+  int speaker_volume = 230;
   int audio_channel = 0;
-  std::size_t polyphony_voices = 8;
+  // M5Unified exposes eight mixer channels. Reserve the last one for a silent
+  // keepalive so the I2S amplifier does not restart on every key press.
+  std::size_t polyphony_voices = 7;
   float default_volume = 0.45f;
   float center_sample = 128.0f;
   std::size_t wavetable_size = 256;
-  float sine_peak = 100.0f;
-  float saw_peak = 46.0f;
-  float square_peak = 34.0f;
-  float triangle_peak = 127.0f;
-  float sine_trim = 0.90f;
+  float sine_peak = 108.0f;
+  float saw_peak = 68.0f;
+  float square_peak = 58.0f;
+  float triangle_peak = 110.0f;
+  float sine_trim = 0.94f;
   float saw_trim = 0.88f;
-  float square_trim = 0.82f;
+  float square_trim = 0.84f;
   float triangle_trim = 0.94f;
   std::uint32_t mic_sample_rate = 24000;
   std::uint32_t mic_sample_max_ms = 5000;

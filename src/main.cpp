@@ -1,10 +1,10 @@
 #include <M5Unified.h>
 
-#include "SynthApp.h"
+#include "RetroSynthApp.h"
 
 namespace {
 
-SynthApp app;
+RetroSynthApp app;
 
 }
 
@@ -14,14 +14,11 @@ void setup() {
   M5.begin(cfg);
 
   M5.Display.setRotation(3);
-  M5.Display.setTextSize(2);
-  M5.Display.setFont(&fonts::Font4);
-
   app.begin();
 }
 
 void loop() {
   M5.update();
   app.update();
-  delay(5);
+  delay(1);
 }

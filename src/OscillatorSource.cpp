@@ -14,14 +14,29 @@ constexpr float kTwoPi = 6.28318530718f;
 }
 
 bool OscillatorSource::begin() {
+  last_channel_volume_.fill(255);
+  silence_wave_.fill(static_cast<std::uint8_t>(SynthConfig::audio.center_sample));
   buildWaveTables();
   buildFilteredWaveTables();
   setVolume(volume_);
+  constexpr int keepalive_channel = 7;
+  M5.Speaker.setChannelVolume(keepalive_channel, 0);
+  M5.Speaker.tone(100.0f, UINT32_MAX, keepalive_channel, true, silence_wave_.data(), silence_wave_.size(), false);
   return true;
 }
 
 bool OscillatorSource::noteOn(std::size_t voice_index, float /*note_value*/, float frequency, Waveform waveform) {
   ensureFilteredWaveTables();
+  const bool processed = (filter_enabled_ && filter_mix_normalized_ > 0.0f) ||
+                         (distortion_enabled_ && distortion_mix_normalized_ > 0.0f) ||
+                         (bitcrusher_enabled_ && bitcrusher_mix_normalized_ > 0.0f);
+  if (waveform == Waveform::Sine && !processed) {
+    const auto sample_rate = static_cast<std::uint32_t>(
+        std::lround(frequency * static_cast<float>(kSineWaveTableSize)));
+    M5.Speaker.playRaw(sine_wave_16_.data(), sine_wave_16_.size(), sample_rate,
+                       false, UINT32_MAX, channelForVoice(voice_index), true);
+    return true;
+  }
   M5.Speaker.tone(frequency, UINT32_MAX, channelForVoice(voice_index), true, waveformTable(waveform),
                   kWaveTableSize, false);
   return true;
@@ -43,8 +58,16 @@ void OscillatorSource::setVolume(float volume) {
 
 void OscillatorSource::setVoiceLevel(std::size_t voice_index, float level, Waveform waveform) {
   const float scaled = std::clamp(level * SynthConfig::waveformTrim(waveform), 0.0f, 1.0f);
-  M5.Speaker.setChannelVolume(channelForVoice(voice_index),
-                              static_cast<std::uint8_t>(std::lround(scaled * 255.0f)));
+  // M5Unified squares channel volume in its mixer. Pre-compensate so the ADSR
+  // remains linear instead of producing coarse, steep gain steps near onset.
+  const auto next_volume = static_cast<std::uint8_t>(std::lround(std::sqrt(scaled) * 255.0f));
+  if (voice_index < last_channel_volume_.size() && last_channel_volume_[voice_index] == next_volume) {
+    return;
+  }
+  if (voice_index < last_channel_volume_.size()) {
+    last_channel_volume_[voice_index] = next_volume;
+  }
+  M5.Speaker.setChannelVolume(channelForVoice(voice_index), next_volume);
 }
 
 void OscillatorSource::setFilterEnabled(bool enabled) {
@@ -131,12 +154,19 @@ void OscillatorSource::buildWaveTables() {
       const float sample = std::clamp(SynthConfig::audio.center_sample + value * peak, 1.0f, 255.0f);
       table[i] = static_cast<std::uint8_t>(std::lround(sample));
     }
+    table[0] = static_cast<std::uint8_t>(SynthConfig::audio.center_sample);
   };
 
   fill_table(sine_wave_, Waveform::Sine);
   fill_table(saw_wave_, Waveform::Saw);
   fill_table(square_wave_, Waveform::Square);
   fill_table(triangle_wave_, Waveform::Triangle);
+  const float sine_peak_16 = (SynthConfig::audio.sine_peak / SynthConfig::audio.center_sample) * 32767.0f;
+  for (std::size_t i = 0; i < sine_wave_16_.size(); ++i) {
+    const float phase = static_cast<float>(i) / static_cast<float>(sine_wave_16_.size());
+    sine_wave_16_[i] = static_cast<std::int16_t>(std::lround(std::sinf(phase * kTwoPi) * sine_peak_16));
+  }
+  sine_wave_16_[0] = 0;
   filter_tables_dirty_ = true;
 }
 

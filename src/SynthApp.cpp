@@ -250,6 +250,7 @@ void SynthApp::update() {
   audio_engine_.update();
   handleTouch();
   applyLfoModulation();
+  refreshDeferredPerformance();
 }
 
 void SynthApp::handleTouch() {
@@ -579,6 +580,7 @@ void SynthApp::applyPreset(std::size_t preset_index) {
       state.enabled = false;
     }
   }
+
   loadLfoTargetState(ui_state_.selected_parameter);
 
   audio_engine_.setSourceType(AudioSourceType::Oscillator);
@@ -1006,8 +1008,6 @@ void SynthApp::handlePerformanceTouches(const std::array<float, SynthConfig::ui.
   for (std::size_t i = 0; i < keyboard_note_count && !keyboard_changed; ++i) {
     keyboard_changed = keyboard_notes[i] != last_drawn_keyboard_notes_[i];
   }
-  const bool refresh_due = (millis() - last_ui_refresh_ms_) >= kUiRefreshIntervalMs;
-
   audio_engine_.noteOnVoices(note_values.data(), note_count, ui_state_.selected_waveform);
   ui_state_.touch_count = pad_count;
   ui_state_.touch_xs = xs;
@@ -1021,18 +1021,7 @@ void SynthApp::handlePerformanceTouches(const std::array<float, SynthConfig::ui.
   ui_state_.keyboard_note_count = keyboard_note_count;
   ui_state_.keyboard_notes = keyboard_notes;
 
-  if (marker_changed || refresh_due) {
-    ui_.refreshPerformance(ui_state_);
-    last_ui_refresh_ms_ = millis();
-    last_drawn_touch_count_ = pad_count;
-    last_drawn_touch_xs_ = xs;
-    last_drawn_touch_ys_ = ys;
-  }
-  if (keyboard_changed) {
-    ui_.refreshKeyboard(ui_state_);
-    last_drawn_keyboard_note_count_ = keyboard_note_count;
-    last_drawn_keyboard_notes_ = keyboard_notes;
-  }
+  performance_redraw_pending_ = performance_redraw_pending_ || marker_changed || keyboard_changed;
 }
 
 void SynthApp::finishMicRecording() {
@@ -1076,6 +1065,13 @@ void SynthApp::stopNote() {
   ui_state_.keyboard_note_count = 0;
   ui_state_.keyboard_notes.fill(0);
   syncUiState();
+  performance_redraw_pending_ = true;
+}
+
+void SynthApp::refreshDeferredPerformance() {
+  if (!performance_redraw_pending_ || audio_engine_.isNotePlaying()) {
+    return;
+  }
   ui_.refreshPerformance(ui_state_);
   ui_.refreshKeyboard(ui_state_);
   last_ui_refresh_ms_ = millis();
@@ -1084,6 +1080,7 @@ void SynthApp::stopNote() {
   last_drawn_touch_ys_.fill(0);
   last_drawn_keyboard_note_count_ = 0;
   last_drawn_keyboard_notes_.fill(0);
+  performance_redraw_pending_ = false;
 }
 
 float SynthApp::lfoWaveValue(float phase, float shape) const {
