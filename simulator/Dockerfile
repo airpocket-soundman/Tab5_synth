@@ -24,7 +24,7 @@ RUN git -C /opt/m5gfx apply /workspace/simulator/m5gfx/emscripten-panel-sdl.patc
 
 RUN --mount=type=cache,target=/workspace/build,sharing=locked \
     emcmake cmake -S simulator -B build -DLVGL_DIR=/opt/lvgl -DM5GFX_DIR=/opt/m5gfx \
-    && cmake --build build --parallel \
+    && cmake --build build --parallel 1 \
     && mkdir -p /workspace/dist \
     && cp build/index.html build/index.data build/m5gfx.html build/m5gfx.js build/m5gfx.wasm /workspace/dist/ \
     && cp build/index.html /workspace/dist/metal.html \

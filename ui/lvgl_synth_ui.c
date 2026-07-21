@@ -122,6 +122,7 @@ static const char *lfo_wave_name(uint8_t value)
 static synth_state_t state;
 static synth_state_t memories[5];
 static bool memories_ready;
+static bool state_ready;
 static int current_memory;
 static int active_preset = -1;
 static int current_page = PAGE_AMP;
@@ -407,6 +408,24 @@ static lv_obj_t *make_rect(lv_obj_t *parent, int x, int y, int w, int h, uint32_
     return obj;
 }
 
+static lv_obj_t *make_neon_rect(lv_obj_t *parent, int x, int y, int w, int h,
+                                uint32_t color, lv_opa_t opacity, int glow_width)
+{
+    lv_obj_t *outer_glow = make_rect(parent, x - 8, y - 8, w + 16, h + 16, color);
+    lv_obj_t *inner_glow = make_rect(parent, x - 4, y - 4, w + 8, h + 8, color);
+    lv_obj_t *obj = make_rect(parent, x, y, w, h, color);
+    lv_obj_set_style_bg_opa(outer_glow, LV_OPA_10, 0);
+    lv_obj_set_style_bg_opa(inner_glow, LV_OPA_30, 0);
+    lv_obj_set_style_bg_opa(obj, opacity, 0);
+    lv_obj_set_style_shadow_color(obj, lv_color_hex(color), 0);
+    lv_obj_set_style_shadow_width(obj, glow_width + 9, 0);
+    lv_obj_set_style_shadow_spread(obj, 2, 0);
+    lv_obj_set_style_shadow_ofs_x(obj, 0, 0);
+    lv_obj_set_style_shadow_ofs_y(obj, 0, 0);
+    lv_obj_set_style_shadow_opa(obj, LV_OPA_80, 0);
+    return obj;
+}
+
 static lv_obj_t *make_panel(lv_obj_t *parent, int x, int y, int w, int h)
 {
     lv_obj_t *obj = lv_obj_create(parent);
@@ -424,12 +443,13 @@ static lv_obj_t *make_panel(lv_obj_t *parent, int x, int y, int w, int h)
     lv_obj_set_style_pad_all(obj, 0, 0);
     no_scroll(obj);
     if(is_metal_theme()) {
+        int grain_y;
         lv_obj_set_style_radius(obj, 2, 0);
-        lv_obj_set_style_bg_color(obj, lv_color_hex(0x20282d), 0);
-        lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0x11171b), 0);
-        lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, 0);
+        lv_obj_set_style_bg_color(obj, lv_color_hex(0x596368), 0);
+        lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0xd9ddde), 0);
+        lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_HOR, 0);
         lv_obj_set_style_border_width(obj, 2, 0);
-        lv_obj_set_style_border_color(obj, lv_color_hex(0x8b989e), 0);
+        lv_obj_set_style_border_color(obj, lv_color_hex(0xd7dee1), 0);
         lv_obj_set_style_outline_width(obj, 1, 0);
         lv_obj_set_style_outline_color(obj, lv_color_hex(0x080b0d), 0);
         lv_obj_set_style_outline_pad(obj, 1, 0);
@@ -437,30 +457,49 @@ static lv_obj_t *make_panel(lv_obj_t *parent, int x, int y, int w, int h)
         lv_obj_set_style_shadow_ofs_y(obj, 4, 0);
         lv_obj_set_style_shadow_color(obj, lv_color_hex(0x020304), 0);
         lv_obj_set_style_shadow_opa(obj, LV_OPA_70, 0);
+        for(grain_y = 4; grain_y < h - 4; grain_y += 2) {
+            int left = 4 + (grain_y * 23) % 31;
+            int right = 5 + (grain_y * 17) % 37;
+            int bright = ((grain_y * 13) % 11) < 5;
+            lv_obj_t *grain = make_rect(obj, left, grain_y, w - left - right, 1,
+                                        bright ? 0xf3f5f5 : 0x303a3f);
+            lv_obj_set_style_bg_opa(grain, bright ? LV_OPA_20 : LV_OPA_10, 0);
+            if((grain_y % 10) == 4 && w > 240) {
+                int streak_x = 22 + (grain_y * 29) % (w - 220);
+                int streak_w = 90 + (grain_y * 7) % 120;
+                lv_obj_t *streak = make_rect(obj, streak_x, grain_y, streak_w, 1,
+                                             (grain_y % 20) == 4 ? 0xffffff : 0x1e282d);
+                lv_obj_set_style_bg_opa(streak,
+                                        (grain_y % 20) == 4 ? LV_OPA_30 : LV_OPA_10, 0);
+            }
+        }
+        {
+            lv_obj_t *top_reflection = make_rect(obj, 5, 3, w - 10, 1, 0xc3ccd0);
+            lv_obj_t *bottom_reflection = make_rect(obj, 5, h - 5, w - 10, 1, 0x06090b);
+            lv_obj_set_style_bg_opa(top_reflection, LV_OPA_70, 0);
+            lv_obj_set_style_bg_opa(bottom_reflection, LV_OPA_40, 0);
+        }
     } else if(is_cyberdeck_theme()) {
         lv_obj_set_style_radius(obj, 2, 0);
         lv_obj_set_style_bg_color(obj, lv_color_hex(0x111719), 0);
         lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0x080c0e), 0);
         lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, 0);
         lv_obj_set_style_border_width(obj, 2, 0);
-        lv_obj_set_style_border_color(obj, lv_color_hex(0x36555d), 0);
-        lv_obj_set_style_outline_width(obj, 1, 0);
+        lv_obj_set_style_border_color(obj, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_border_opa(obj, LV_OPA_70, 0);
+        lv_obj_set_style_outline_width(obj, 2, 0);
         lv_obj_set_style_outline_color(obj, lv_color_hex(CY_CYAN), 0);
-        lv_obj_set_style_outline_opa(obj, LV_OPA_40, 0);
+        lv_obj_set_style_outline_opa(obj, LV_OPA_70, 0);
         lv_obj_set_style_outline_pad(obj, 1, 0);
-        lv_obj_set_style_shadow_width(obj, 10, 0);
-        lv_obj_set_style_shadow_ofs_y(obj, 4, 0);
-        lv_obj_set_style_shadow_color(obj, lv_color_hex(0x010203), 0);
-        lv_obj_set_style_shadow_opa(obj, LV_OPA_80, 0);
+        lv_obj_set_style_shadow_width(obj, 22, 0);
+        lv_obj_set_style_shadow_ofs_y(obj, 0, 0);
+        lv_obj_set_style_shadow_color(obj, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_shadow_opa(obj, LV_OPA_40, 0);
         {
-            lv_obj_t *top_cyan = make_rect(obj, 18, 5, 80, 2, CY_CYAN);
-            lv_obj_t *top_magenta = make_rect(obj, 102, 5, 34, 2, CY_MAGENTA);
-            lv_obj_t *bottom_lime = make_rect(obj, w - 113, h - 7, 54, 2, CY_LIME);
-            lv_obj_t *bottom_amber = make_rect(obj, w - 55, h - 7, 36, 2, CY_AMBER);
-            lv_obj_set_style_bg_opa(top_cyan, LV_OPA_70, 0);
-            lv_obj_set_style_bg_opa(top_magenta, LV_OPA_60, 0);
-            lv_obj_set_style_bg_opa(bottom_lime, LV_OPA_60, 0);
-            lv_obj_set_style_bg_opa(bottom_amber, LV_OPA_60, 0);
+            make_neon_rect(obj, 18, 5, 80, 2, CY_CYAN, LV_OPA_COVER, 10);
+            make_neon_rect(obj, 102, 5, 34, 2, CY_MAGENTA, LV_OPA_COVER, 9);
+            make_neon_rect(obj, w - 113, h - 7, 54, 2, CY_LIME, LV_OPA_COVER, 9);
+            make_neon_rect(obj, w - 55, h - 7, 36, 2, CY_AMBER, LV_OPA_COVER, 9);
         }
     }
     return obj;
@@ -656,7 +695,8 @@ static void style_button(ui_button_t *button, bool latched, bool focused, bool l
         lv_obj_set_style_border_color(button->obj,
                                       lit || focused ? col(accent) : lv_color_hex(0x53676d), 0);
         lv_obj_set_style_outline_color(button->obj, col(accent), 0);
-        lv_obj_set_style_outline_opa(button->obj, focused ? LV_OPA_70 : LV_OPA_20, 0);
+        lv_obj_set_style_outline_width(button->obj, focused || lit ? 2 : 1, 0);
+        lv_obj_set_style_outline_opa(button->obj, focused ? LV_OPA_COVER : (lit ? LV_OPA_70 : LV_OPA_20), 0);
         lv_obj_set_style_text_color(button->text,
                                     lit || focused ? col(accent) : lv_color_hex(0xb4c0c2), 0);
         lv_obj_set_style_bg_color(button->lamp,
@@ -670,6 +710,12 @@ static void style_button(ui_button_t *button, bool latched, bool focused, bool l
         lv_obj_set_style_shadow_color(button->rail, col(accent), 0);
         lv_obj_set_style_shadow_width(button->rail, lit || focused ? 4 : 0, 0);
         lv_obj_set_style_shadow_opa(button->rail, LV_OPA_40, 0);
+        lv_obj_set_style_shadow_color(button->obj, col(accent), 0);
+        lv_obj_set_style_shadow_width(button->obj, focused ? 18 : (lit ? 12 : 0), 0);
+        lv_obj_set_style_shadow_ofs_x(button->obj, 0, 0);
+        lv_obj_set_style_shadow_ofs_y(button->obj, 0, 0);
+        lv_obj_set_style_shadow_opa(button->obj,
+                                    focused ? LV_OPA_70 : (lit ? LV_OPA_50 : LV_OPA_TRANSP), 0);
     }
 
     if(button->target_depth != target_depth) {
@@ -1546,6 +1592,23 @@ static void refresh_ui(void)
     refreshing = false;
 }
 
+static void cycle_theme_async(void *unused)
+{
+    static const char *const names[] = {"WOOD THEME", "METAL THEME", "CYBERDECK THEME"};
+    lv_obj_t *screen = lv_screen_active();
+    (void)unused;
+    current_theme = (lvgl_synth_theme_t)(((int)current_theme + 1) % 3);
+    lv_obj_clean(screen);
+    lvgl_synth_ui_create();
+    set_status(names[(int)current_theme]);
+}
+
+static void theme_event(lv_event_t *event)
+{
+    (void)event;
+    lv_async_call(cycle_theme_async, NULL);
+}
+
 static void create_header(lv_obj_t *screen)
 {
     lv_obj_t *header = make_rect(screen, 0, 0, 1280, 42, 0x171713);
@@ -1565,21 +1628,25 @@ static void create_header(lv_obj_t *screen)
         lv_obj_set_style_bg_grad_color(header, lv_color_hex(0x1b2528), 0);
         lv_obj_set_style_bg_grad_dir(header, LV_GRAD_DIR_VER, 0);
         lv_obj_set_style_border_color(header, lv_color_hex(CY_CYAN), 0);
-        lv_obj_set_style_shadow_width(header, 7, 0);
-        lv_obj_set_style_shadow_ofs_y(header, 3, 0);
-        lv_obj_set_style_shadow_color(header, lv_color_hex(0x010203), 0);
-        make_rect(header, 330, 8, 72, 2, CY_CYAN);
-        make_rect(header, 406, 8, 34, 2, CY_MAGENTA);
-        make_rect(header, 444, 8, 52, 2, CY_LIME);
-        make_rect(header, 1087, 32, 38, 2, CY_AMBER);
-        make_rect(header, 1129, 32, 76, 2, CY_RED);
+        lv_obj_set_style_shadow_width(header, 20, 0);
+        lv_obj_set_style_shadow_ofs_y(header, 0, 0);
+        lv_obj_set_style_shadow_color(header, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_shadow_opa(header, LV_OPA_60, 0);
+        make_neon_rect(header, 330, 8, 72, 2, CY_CYAN, LV_OPA_COVER, 10);
+        make_neon_rect(header, 406, 8, 34, 2, CY_MAGENTA, LV_OPA_COVER, 9);
+        make_neon_rect(header, 444, 8, 52, 2, CY_LIME, LV_OPA_COVER, 9);
+        make_neon_rect(header, 1087, 32, 38, 2, CY_AMBER, LV_OPA_COVER, 8);
+        make_neon_rect(header, 1129, 32, 76, 2, CY_RED, LV_OPA_COVER, 9);
     }
     make_rect(header, 0, 0, 9, 42, C_RED);
     {
-        lv_obj_t *brand = make_label(header, "TAB / FIVE", &lv_font_montserrat_20, C_TEXT);
+        lv_obj_t *brand = make_label(header, "TAB5", &lv_font_montserrat_20, C_TEXT);
         lv_obj_set_pos(brand, 22, 8);
+        lv_obj_set_width(brand, 62);
+        lv_obj_add_flag(brand, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(brand, theme_event, LV_EVENT_RELEASED, NULL);
         lv_obj_t *product = make_label(header, "PERFORMANCE SYNTHESIZER", &lv_font_montserrat_12, C_MUTED);
-        lv_obj_set_pos(product, 176, 15);
+        lv_obj_set_pos(product, 104, 15);
         status_label = make_label(header, "Simulator ready", &lv_font_montserrat_12, C_AMBER);
         lv_obj_set_pos(status_label, 525, 14);
         lv_obj_set_width(status_label, 545);
@@ -1587,6 +1654,25 @@ static void create_header(lv_obj_t *screen)
         lv_obj_t *online = make_label(header, "SIM  ONLINE", &lv_font_montserrat_12, C_LIME);
         lv_obj_set_pos(online, 1112, 14);
     }
+}
+
+static void add_theme_hitbox(lv_obj_t *screen, int x, int y, int w, int h)
+{
+    lv_obj_t *hitbox = lv_obj_create(screen);
+    lv_obj_set_pos(hitbox, x, y);
+    lv_obj_set_size(hitbox, w, h);
+    lv_obj_set_style_bg_opa(hitbox, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(hitbox, 0, 0);
+    lv_obj_set_style_pad_all(hitbox, 0, 0);
+    lv_obj_add_flag(hitbox, LV_OBJ_FLAG_CLICKABLE);
+    no_scroll(hitbox);
+    lv_obj_add_event_cb(hitbox, theme_event, LV_EVENT_PRESSED, NULL);
+}
+
+static void create_theme_hitboxes(lv_obj_t *screen)
+{
+    add_theme_hitbox(screen, 0, 0, 300, 42);
+    add_theme_hitbox(screen, 14, 48, 150, 74);
 }
 
 static void create_sources(lv_obj_t *screen)
@@ -1933,10 +2019,10 @@ static void create_editor(lv_obj_t *screen)
         lv_obj_set_style_bg_opa(engraved_rule, LV_OPA_40, 0);
         make_rect(editor, 14, 315, 622, 1, 0x030302);
     } else if(is_cyberdeck_theme()) {
-        make_rect(editor, 14, 314, 160, 2, CY_CYAN);
-        make_rect(editor, 178, 314, 96, 2, CY_MAGENTA);
-        make_rect(editor, 278, 314, 170, 2, CY_LIME);
-        make_rect(editor, 452, 314, 184, 2, CY_AMBER);
+        make_neon_rect(editor, 14, 314, 160, 2, CY_CYAN, LV_OPA_COVER, 8);
+        make_neon_rect(editor, 178, 314, 96, 2, CY_MAGENTA, LV_OPA_COVER, 8);
+        make_neon_rect(editor, 278, 314, 170, 2, CY_LIME, LV_OPA_COVER, 8);
+        make_neon_rect(editor, 452, 314, 184, 2, CY_AMBER, LV_OPA_COVER, 8);
     }
     target_label = make_label(editor, "BASE / VOL", &lv_font_montserrat_12, C_AMBER);
     lv_obj_set_pos(target_label, 22, 326);
@@ -2110,16 +2196,16 @@ static void create_xy(lv_obj_t *screen)
         lv_obj_set_style_bg_color(pad, lv_color_hex(0x02090b), 0);
         lv_obj_set_style_bg_grad_color(pad, lv_color_hex(0x0a1a1d), 0);
         lv_obj_set_style_bg_grad_dir(pad, LV_GRAD_DIR_VER, 0);
-        lv_obj_set_style_border_width(pad, 4, 0);
+        lv_obj_set_style_border_width(pad, 5, 0);
         lv_obj_set_style_border_color(pad, lv_color_hex(CY_CYAN), 0);
-        lv_obj_set_style_outline_width(pad, 2, 0);
+        lv_obj_set_style_outline_width(pad, 4, 0);
         lv_obj_set_style_outline_color(pad, lv_color_hex(CY_MAGENTA), 0);
-        lv_obj_set_style_outline_opa(pad, LV_OPA_50, 0);
+        lv_obj_set_style_outline_opa(pad, LV_OPA_COVER, 0);
         lv_obj_set_style_outline_pad(pad, 1, 0);
-        lv_obj_set_style_shadow_width(pad, 9, 0);
-        lv_obj_set_style_shadow_ofs_y(pad, 4, 0);
-        lv_obj_set_style_shadow_color(pad, lv_color_hex(0x010203), 0);
-        lv_obj_set_style_shadow_opa(pad, LV_OPA_80, 0);
+        lv_obj_set_style_shadow_width(pad, 28, 0);
+        lv_obj_set_style_shadow_ofs_y(pad, 0, 0);
+        lv_obj_set_style_shadow_color(pad, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_shadow_opa(pad, LV_OPA_70, 0);
     }
     for(i = 1; i < 4; ++i) {
         lv_obj_t *vertical = make_rect(pad, i * 141, 0, 1, 304, 0x3d4035);
@@ -2196,10 +2282,14 @@ static void create_keyboard(lv_obj_t *screen)
         lv_obj_set_style_bg_grad_color(keyboard, lv_color_hex(0x06090b), 0);
         lv_obj_set_style_bg_grad_dir(keyboard, LV_GRAD_DIR_VER, 0);
         lv_obj_set_style_border_color(keyboard, lv_color_hex(0x4d6166), 0);
-        lv_obj_set_style_outline_width(keyboard, 1, 0);
+        lv_obj_set_style_outline_width(keyboard, 3, 0);
         lv_obj_set_style_outline_color(keyboard, lv_color_hex(CY_MAGENTA), 0);
-        lv_obj_set_style_outline_opa(keyboard, LV_OPA_50, 0);
+        lv_obj_set_style_outline_opa(keyboard, LV_OPA_COVER, 0);
         lv_obj_set_style_outline_pad(keyboard, 1, 0);
+        lv_obj_set_style_shadow_width(keyboard, 22, 0);
+        lv_obj_set_style_shadow_ofs_y(keyboard, 0, 0);
+        lv_obj_set_style_shadow_color(keyboard, lv_color_hex(CY_MAGENTA), 0);
+        lv_obj_set_style_shadow_opa(keyboard, LV_OPA_50, 0);
     }
     add_screws(keyboard, 1252, 162);
     {
@@ -2223,6 +2313,11 @@ static void create_keyboard(lv_obj_t *screen)
             lv_obj_set_style_shadow_width(key_bed, 7, 0);
             lv_obj_set_style_shadow_ofs_y(key_bed, 3, 0);
             lv_obj_set_style_shadow_color(key_bed, lv_color_hex(0x010203), 0);
+            make_neon_rect(key_bed, 5, 3, 260, 2, CY_CYAN, LV_OPA_COVER, 8);
+            make_neon_rect(key_bed, 270, 3, 180, 2, CY_MAGENTA, LV_OPA_COVER, 8);
+            make_neon_rect(key_bed, 455, 3, 310, 2, CY_LIME, LV_OPA_COVER, 8);
+            make_neon_rect(key_bed, 770, 3, 220, 2, CY_AMBER, LV_OPA_COVER, 8);
+            make_neon_rect(key_bed, 995, 3, 220, 2, CY_RED, LV_OPA_COVER, 8);
         }
     }
     for(i = 0; i < 15; ++i) {
@@ -2355,7 +2450,10 @@ void lvgl_synth_ui_create(void)
 {
     lv_obj_t *screen = lv_screen_active();
     int i;
-    default_patch(&state);
+    if(!state_ready) {
+        default_patch(&state);
+        state_ready = true;
+    }
     if(!memories_ready) {
         for(i = 0; i < 5; ++i) {
             default_patch(&memories[i]);
@@ -2372,6 +2470,7 @@ void lvgl_synth_ui_create(void)
     create_editor(screen);
     create_xy(screen);
     create_keyboard(screen);
+    create_theme_hitboxes(screen);
     refresh_ui();
 }
 
