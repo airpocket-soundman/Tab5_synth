@@ -112,11 +112,18 @@ static const char *const short_target_names[TARGET_COUNT] = {
 
 static const int fx_target_base[FX_COUNT] = {T_DELAY_TIME, T_CHORUS_RATE, T_DRIVE_DRV, T_CRUSH_BITS};
 
+static int lfo_wave_index(uint8_t value)
+{
+    if(value < 20) return 0;
+    if(value < 55) return 1;
+    if(value < 85) return 2;
+    return 3;
+}
+
 static const char *lfo_wave_name(uint8_t value)
 {
-    if(value < 34) return "SINE";
-    if(value < 67) return "TRIANGLE";
-    return "SQUARE";
+    static const char *const names[4] = {"SINE", "TRIANGLE", "SQUARE", "RND"};
+    return names[lfo_wave_index(value)];
 }
 
 static synth_state_t state;
@@ -142,7 +149,8 @@ static ui_button_t bank_buttons[16];
 static lv_obj_t *pages[PAGE_COUNT];
 static rotary_knob_t amp_knobs[5];
 static rotary_knob_t fx_knobs[3];
-static rotary_knob_t lfo_knobs[3];
+static rotary_knob_t lfo_knobs[2];
+static ui_button_t lfo_wave_buttons[4];
 static lv_obj_t *amp_envelope_module;
 static lv_obj_t *amp_envelope_dots[AMP_ENV_COLS][AMP_ENV_ROWS];
 static int8_t amp_envelope_active_rows[AMP_ENV_COLS];
@@ -1083,6 +1091,18 @@ static void lfo_power_event(lv_event_t *event)
     notify_state_changed();
 }
 
+static void lfo_wave_event(lv_event_t *event)
+{
+    static const uint8_t wave_values[4] = {0, 40, 70, 100};
+    int wave = (int)(intptr_t)lv_event_get_user_data(event);
+    state.lfo[current_target].wave = wave_values[wave];
+    edit_mode = EDIT_LFO_WAVE;
+    animate_control_updates = true;
+    set_status("LFO waveform selected");
+    refresh_ui();
+    notify_state_changed();
+}
+
 static void update_fader_cap_geometry(int value)
 {
     enum { FADER_X = 24, FADER_WIDTH = 596, CAP_WIDTH = 40 };
@@ -1546,17 +1566,21 @@ static void refresh_ui(void)
     lv_label_set_text(lfo_power_button.text, state.lfo[current_target].enabled ? "LFO ON" : "LFO OFF");
     style_button(&lfo_power_button, state.lfo[current_target].enabled, state.lfo[current_target].enabled,
                  state.lfo[current_target].enabled, C_CYAN);
-    for(i = 0; i < 3; ++i) {
-        int value = i == 0 ? state.lfo[current_target].rate :
-                    (i == 1 ? state.lfo[current_target].depth : state.lfo[current_target].wave);
+    for(i = 0; i < 2; ++i) {
+        int value = i == 0 ? state.lfo[current_target].rate : state.lfo[current_target].depth;
         bool selected = edit_mode == EDIT_LFO_RATE + i;
         set_rotary_value(&lfo_knobs[i], value, animate_controls);
-        if(i == 2) lv_label_set_text(lfo_knobs[i].value, lfo_wave_name((uint8_t)value));
-        else {
-            lv_snprintf(text, sizeof(text), "%d", value);
-            lv_label_set_text(lfo_knobs[i].value, text);
-        }
+        lv_snprintf(text, sizeof(text), "%d", value);
+        lv_label_set_text(lfo_knobs[i].value, text);
         style_rotary(&lfo_knobs[i], selected, C_CYAN);
+    }
+    {
+        uint8_t wave = state.lfo[current_target].wave;
+        int selected_wave = lfo_wave_index(wave);
+        for(i = 0; i < 4; ++i) {
+            bool selected = i == selected_wave;
+            style_button(&lfo_wave_buttons[i], selected, selected, selected, C_CYAN);
+        }
     }
 
     for(i = 0; i < 16; ++i) {
@@ -1588,7 +1612,14 @@ static void refresh_ui(void)
             lv_slider_set_range(common_slider, 0, 100);
         }
     }
-    set_fader_value(*edited_value(), animate_controls);
+    if(edit_mode == EDIT_LFO_WAVE) {
+        lv_obj_add_flag(common_slider, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(fader_cap, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_remove_flag(common_slider, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(fader_cap, LV_OBJ_FLAG_HIDDEN);
+        set_fader_value(*edited_value(), animate_controls);
+    }
     refreshing = false;
 }
 
@@ -1966,6 +1997,8 @@ static void create_fx_page(lv_obj_t *parent)
 
 static void create_lfo_page(lv_obj_t *parent)
 {
+    static const char *const wave_names[4] = {"SINE", "TRI", "SQR", "RND"};
+    int i;
     pages[PAGE_LFO] = create_page(parent);
     lfo_target_label = make_label(pages[PAGE_LFO], "TARGET VOL", &lv_font_montserrat_18, C_TEXT);
     lv_obj_set_pos(lfo_target_label, 18, 13);
@@ -1974,7 +2007,17 @@ static void create_lfo_page(lv_obj_t *parent)
     lv_obj_set_pos(lfo_state_label, 18, 60);
     create_rotary_knob(pages[PAGE_LFO], &lfo_knobs[0], 57, 88, ROTARY_LFO, 0, "RAT");
     create_rotary_knob(pages[PAGE_LFO], &lfo_knobs[1], 258, 88, ROTARY_LFO, 1, "DEP");
-    create_rotary_knob(pages[PAGE_LFO], &lfo_knobs[2], 459, 88, ROTARY_LFO, 2, "WAV");
+    {
+        lv_obj_t *wave_label = make_label(pages[PAGE_LFO], "WAVEFORM", &lv_font_montserrat_12, C_MUTED);
+        lv_obj_set_pos(wave_label, 453, 84);
+    }
+    for(i = 0; i < 4; ++i) {
+        int column = i % 2;
+        int row = i / 2;
+        lfo_wave_buttons[i] = make_button(pages[PAGE_LFO], wave_names[i],
+                                          432 + column * 62, 104 + row * 60, 56, 56,
+                                          lfo_wave_event, i);
+    }
     {
         lv_obj_t *note = make_label(pages[PAGE_LFO], "CYAN CONTROLS EDIT LFO; AMBER CONTROLS EDIT BASE", &lv_font_montserrat_12, C_MUTED);
         lv_obj_set_pos(note, 18, 226);

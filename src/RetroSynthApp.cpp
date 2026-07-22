@@ -241,14 +241,24 @@ float RetroSynthApp::modulatedValue(int target, std::uint32_t now_ms) const {
   }
 
   const float rate = 0.05f + 9.95f * static_cast<float>(ui_state_.lfo_rate[target]) / 100.0f;
-  const float phase = std::fmod(static_cast<float>(now_ms) * rate / 1000.0f, 1.0f);
+  const float cycles = static_cast<float>(now_ms) * rate / 1000.0f;
+  const float phase = std::fmod(cycles, 1.0f);
   float wave = 0.0f;
-  if (ui_state_.lfo_wave[target] < 34) {
+  if (ui_state_.lfo_wave[target] < 20) {
     wave = std::sin(kTwoPi * phase);
-  } else if (ui_state_.lfo_wave[target] < 67) {
+  } else if (ui_state_.lfo_wave[target] < 55) {
     wave = 1.0f - 4.0f * std::fabs(phase - 0.5f);
-  } else {
+  } else if (ui_state_.lfo_wave[target] < 85) {
     wave = phase < 0.5f ? 1.0f : -1.0f;
+  } else {
+    std::uint32_t hash = static_cast<std::uint32_t>(std::floor(cycles));
+    hash += 0x9e3779b9u * static_cast<std::uint32_t>(target + 1);
+    hash ^= hash >> 16;
+    hash *= 0x7feb352du;
+    hash ^= hash >> 15;
+    hash *= 0x846ca68bu;
+    hash ^= hash >> 16;
+    wave = static_cast<float>(hash & 0xffffu) / 32767.5f - 1.0f;
   }
   const float depth = static_cast<float>(ui_state_.lfo_depth[target]) / 100.0f;
   return clampUnit(base + wave * depth * 0.5f);
