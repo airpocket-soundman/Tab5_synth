@@ -15,6 +15,9 @@
   ],
   "assets": [
     "ui/assets"
+  ],
+  "notices": [
+    "LICENSE",
+    "LICENSE_NOTICES.md"
   ]
 }
-

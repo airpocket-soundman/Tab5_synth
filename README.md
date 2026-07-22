@@ -2,6 +2,10 @@
 
 Synthesizer firmware for M5Stack Tab5.
 
+The project's original application code and UI assets are licensed under the
+[MIT License](LICENSE). Third-party scope and distribution notes are documented
+in [docs/licensing.md](docs/licensing.md).
+
 See [spec.md](spec.md) for the current implementation specification.
 
 ## LVGL Web Simulator
