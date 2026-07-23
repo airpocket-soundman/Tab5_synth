@@ -28,7 +28,7 @@
       <p class="lede">Tab5 Synth は、オシレータ、マイク録音、外部 I2S 入力、ADSR、4 系統のエフェクト、パラメータ単位の LFO、プリセット、タッチ鍵盤を一画面にまとめた 8 ボイス・シンセサイザです。</p>
       <div class="hero-actions">
         <a class="button" href="#quickstart">最初の音を出す</a>
-        <a class="button secondary" href="#simulator">シミュレータを操作する</a>
+        <a class="button secondary" href="simulator.html" target="_blank" rel="noopener">シミュレータを別ページで開く</a>
       </div>
     </div>
 
@@ -53,9 +53,9 @@
       <h2>3種類のスキン</h2>
       <p class="section-intro">操作画面は 3 種類の外観に切り替えられます。スキンは表示だけを変更し、音色パラメータ、エフェクト、LFO、演奏状態には影響しません。</p>
       <div class="skin-grid">
-        <article class="skin-card" data-skin="wood"><img class="skin-shot" data-sim-skin="wood" src="assets/screens/skin-wood.png" alt="Retro Wood スキンのAMP画面"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>標準スキン。ウォルナット、真鍮、クリーム色の鍵盤を使った温かいビンテージ調です。</p></div></article>
-        <article class="skin-card" data-skin="metal"><img class="skin-shot" data-sim-skin="metal" src="assets/screens/skin-metal.png" alt="Metal スキンのAMP画面"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>ヘアライン金属、シルバーの縁、暗い操作面を組み合わせたスタジオ機器風です。</p></div></article>
-        <article class="skin-card" data-skin="neon"><img class="skin-shot" data-sim-skin="neon" src="assets/screens/skin-neon.png" alt="Neon スキンのAMP画面"><div class="skin-preview">NEON</div><div class="skin-copy"><h3>Neon</h3><p>シアン、マゼンタ、ライムの発光色とデジタルグリッドを使ったネオン調です。</p></div></article>
+        <article class="skin-card" data-skin="wood"><img class="skin-shot" src="assets/screens/skin-wood.png" alt="Retro Wood スキンのAMP画面"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>標準スキン。ウォルナット、真鍮、クリーム色の鍵盤を使った温かいビンテージ調です。</p></div></article>
+        <article class="skin-card" data-skin="metal"><img class="skin-shot" src="assets/screens/skin-metal.png" alt="Metal スキンのAMP画面"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>ヘアライン金属、シルバーの縁、暗い操作面を組み合わせたスタジオ機器風です。</p></div></article>
+        <article class="skin-card" data-skin="neon"><img class="skin-shot" src="assets/screens/skin-neon.png" alt="Neon スキンのAMP画面"><div class="skin-preview">NEON</div><div class="skin-copy"><h3>Neon</h3><p>シアン、マゼンタ、ライムの発光色とデジタルグリッドを使ったネオン調です。</p></div></article>
       </div>
       <div class="steps">
         <article class="step"><h3>左上をタップ</h3><p>画面左上の <b>TAB5 / PERFORMANCE SYNTHESIZER</b> 部分、または <b>01 SOURCE</b> の見出し部分をタップします。</p></article>
@@ -83,9 +83,9 @@
       <h2>AMP · 音量とエンベロープ</h2>
       <p class="section-intro">AMP は「どのくらい大きく」「鍵盤を押してから離すまで、音量がどう変化するか」を決めます。ノブを選択してから、共通フェーダーで 0–100 の値を設定します。</p>
       <figure class="sim-figure">
-        <div class="sim-toolbar"><strong>LVGL capture · AMP</strong><span class="capture-status" data-ready="実シミュレータから取得" data-failed="下のライブシミュレータで確認できます">キャプチャ中…</span></div>
-        <div class="sim-fallback">LVGL シミュレータを起動して AMP 画面を取得しています。</div>
-        <img class="sim-shot" data-sim-page="amp" src="assets/screens/amp.png" alt="Tab5 Synth の AMP 画面">
+        <div class="sim-toolbar"><strong>LVGL capture · AMP</strong><span class="capture-status">LVGLシミュレータの固定キャプチャ</span></div>
+
+        <img class="sim-shot" src="assets/screens/amp.png" alt="Tab5 Synth の AMP 画面">
         <figcaption class="callouts">
           <span class="callout"><b>1</b>AMP / FX / LFO / BANK タブ</span>
           <span class="callout"><b>2</b>VOL と ADSR ノブ</span>
@@ -118,9 +118,9 @@
       <h2>FX · エフェクト</h2>
       <p class="section-intro">エフェクト名のボタンは、選択と ON/OFF を兼ねます。OFF にしてもパラメータは編集可能です。選んだエフェクトの 3 パラメータが中央に表示されます。</p>
       <figure class="sim-figure">
-        <div class="sim-toolbar"><strong>LVGL capture · FX</strong><span class="capture-status" data-ready="実シミュレータから取得" data-failed="下のライブシミュレータで確認できます">キャプチャ中…</span></div>
-        <div class="sim-fallback">FX 画面を取得しています。</div>
-        <img class="sim-shot" data-sim-page="fx" src="assets/screens/fx.png" alt="Tab5 Synth の FX 画面">
+        <div class="sim-toolbar"><strong>LVGL capture · FX</strong><span class="capture-status">LVGLシミュレータの固定キャプチャ</span></div>
+
+        <img class="sim-shot" src="assets/screens/fx.png" alt="Tab5 Synth の FX 画面">
         <figcaption class="callouts">
           <span class="callout"><b>1</b>赤いランプで ON/OFF</span>
           <span class="callout"><b>2</b>選択中の FX</span>
@@ -150,9 +150,9 @@
       <h2>LFO · 自動モジュレーション</h2>
       <p class="section-intro">LFO は低周波の波でノブを自動的に揺らします。AMP と FX の 17 パラメータそれぞれに、独立した Rate / Depth / Wave / ON/OFF が保存されます。</p>
       <figure class="sim-figure">
-        <div class="sim-toolbar"><strong>LVGL capture · LFO</strong><span class="capture-status" data-ready="実シミュレータから取得" data-failed="下のライブシミュレータで確認できます">キャプチャ中…</span></div>
-        <div class="sim-fallback">LFO 画面を取得しています。</div>
-        <img class="sim-shot" data-sim-page="lfo" src="assets/screens/lfo.png" alt="Tab5 Synth の LFO 画面">
+        <div class="sim-toolbar"><strong>LVGL capture · LFO</strong><span class="capture-status">LVGLシミュレータの固定キャプチャ</span></div>
+
+        <img class="sim-shot" src="assets/screens/lfo.png" alt="Tab5 Synth の LFO 画面">
         <figcaption class="callouts">
           <span class="callout"><b>1</b>TARGET は直前のパラメータ</span>
           <span class="callout"><b>2</b>LFO ON / OFF は対象別</span>
@@ -182,9 +182,9 @@
       <h2>BANK · プリセットとメモリ</h2>
       <p class="section-intro">11 個の音色プリセットと 5 個の編集メモリがあります。プリセットは音作りの出発点、M1–M5 は現在の作業状態を切り替えながら保持するスロットです。</p>
       <figure class="sim-figure">
-        <div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status" data-ready="実シミュレータから取得" data-failed="下のライブシミュレータで確認できます">キャプチャ中…</span></div>
-        <div class="sim-fallback">BANK 画面を取得しています。</div>
-        <img class="sim-shot" data-sim-page="bank" src="assets/screens/bank.png" alt="Tab5 Synth の BANK 画面">
+        <div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status">LVGLシミュレータの固定キャプチャ</span></div>
+
+        <img class="sim-shot" src="assets/screens/bank.png" alt="Tab5 Synth の BANK 画面">
         <figcaption class="callouts">
           <span class="callout"><b>1</b>GTR–SYN は固定音色</span>
           <span class="callout"><b>2</b>RND はランダム音色</span>
@@ -224,16 +224,9 @@
       </div>
     </section>
 
-    <section id="simulator">
-      <h2>ライブ LVGL シミュレータ</h2>
-      <p class="section-intro">下の画面は画像ではなく、リポジトリの UI ソースからビルドしたシミュレータです。音声は出ませんが、音源、各タブ、ノブ、フェーダー、鍵盤の操作を試せます。</p>
-      <iframe class="live-sim" src="simulator.html" title="Tab5 Synth LVGL simulator"></iframe>
-      <p class="note">ノブはドラッグ、下の横フェーダーはタップまたはドラッグできます。MIC / I2S と実音声処理は Tab5 実機で確認してください。</p>
-    </section>
   </main>
 
-  <iframe id="capture-simulator" src="simulator.html" title="画面キャプチャ用 LVGL simulator" aria-hidden="true"></iframe>
   <footer class="footer"><div style="width:min(var(--max),calc(100% - 32px));margin:auto">Tab5 Synth · <a href="https://github.com/airpocket-soundman/Tab5_synth">Source on GitHub</a> · UI とマニュアルはリポジトリの実装に基づきます。</div></footer>
-  <script src="assets/manual.js?v=20260723-3"></script>
+  <script src="assets/manual.js?v=20260723-4"></script>
 </body>
 </html>

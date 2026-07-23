@@ -19,7 +19,7 @@
       <p class="eyebrow">M5Stack Tab5 · Performance Synthesizer</p>
       <h1>Touch it. Shape it. Play it.</h1>
       <p class="lede">Tab5 Synth combines oscillators, microphone sampling, external I2S input, an ADSR envelope, four effects, per-parameter LFOs, presets, an XY pad, and a touch keyboard in one 8-voice instrument.</p>
-      <div class="hero-actions"><a class="button" href="#quickstart">Make your first sound</a><a class="button secondary" href="#simulator">Open the simulator</a></div>
+      <div class="hero-actions"><a class="button" href="#quickstart">Make your first sound</a><a class="button secondary" href="../simulator.html" target="_blank" rel="noopener">Open simulator on a separate page</a></div>
     </div>
     <div class="facts"><div class="fact"><strong>8 voices</strong><span>Up to eight simultaneous notes</span></div><div class="fact"><strong>6 sources</strong><span>SINE / SAW / SQUARE / TRIANGLE / MIC / I2S</span></div><div class="fact"><strong>17 targets</strong><span>An independent LFO for every AMP and FX parameter</span></div></div>
 
@@ -38,9 +38,9 @@
       <h2>Three UI skins</h2>
       <p class="section-intro">The interface has three visual skins. Changing skin affects appearance only; sound parameters, effects, LFO settings, and currently held state remain unchanged.</p>
       <div class="skin-grid">
-        <article class="skin-card" data-skin="wood"><img class="skin-shot" data-sim-skin="wood" src="../assets/screens/skin-wood.png" alt="AMP screen using the Retro Wood skin"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>The default skin, with walnut, brass, and warm cream-colored keys.</p></div></article>
-        <article class="skin-card" data-skin="metal"><img class="skin-shot" data-sim-skin="metal" src="../assets/screens/skin-metal.png" alt="AMP screen using the Metal skin"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>A studio-hardware look using brushed metal, silver edging, and dark control surfaces.</p></div></article>
-        <article class="skin-card" data-skin="neon"><img class="skin-shot" data-sim-skin="neon" src="../assets/screens/skin-neon.png" alt="AMP screen using the Neon skin"><div class="skin-preview">NEON</div><div class="skin-copy"><h3>Neon</h3><p>A neon digital look using cyan, magenta, lime accents, and a glowing grid.</p></div></article>
+        <article class="skin-card" data-skin="wood"><img class="skin-shot" src="../assets/screens/skin-wood.png" alt="AMP screen using the Retro Wood skin"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>The default skin, with walnut, brass, and warm cream-colored keys.</p></div></article>
+        <article class="skin-card" data-skin="metal"><img class="skin-shot" src="../assets/screens/skin-metal.png" alt="AMP screen using the Metal skin"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>A studio-hardware look using brushed metal, silver edging, and dark control surfaces.</p></div></article>
+        <article class="skin-card" data-skin="neon"><img class="skin-shot" src="../assets/screens/skin-neon.png" alt="AMP screen using the Neon skin"><div class="skin-preview">NEON</div><div class="skin-copy"><h3>Neon</h3><p>A neon digital look using cyan, magenta, lime accents, and a glowing grid.</p></div></article>
       </div>
       <div class="steps">
         <article class="step"><h3>Tap the upper left</h3><p>Tap <b>TAB5 / PERFORMANCE SYNTHESIZER</b> at the upper left, or tap the <b>01 SOURCE</b> title area.</p></article>
@@ -68,8 +68,8 @@
       <h2>AMP · Level and envelope</h2>
       <p class="section-intro">AMP controls overall level and how the volume changes from key-down to key-up. Select a knob, then use the shared 0–100 fader at the bottom of the editor.</p>
       <figure class="sim-figure">
-        <div class="sim-toolbar"><strong>LVGL capture · AMP</strong><span class="capture-status" data-ready="Captured from the live simulator" data-failed="Use the live simulator below">Capturing…</span></div>
-        <div class="sim-fallback">Starting the LVGL simulator and capturing AMP.</div><img class="sim-shot" data-sim-page="amp" src="../assets/screens/amp.png" alt="Tab5 Synth AMP screen">
+        <div class="sim-toolbar"><strong>LVGL capture · AMP</strong><span class="capture-status">Static LVGL simulator capture</span></div>
+        <img class="sim-shot" src="../assets/screens/amp.png" alt="Tab5 Synth AMP screen">
         <figcaption class="callouts"><span class="callout"><b>1</b>AMP / FX / LFO / BANK pages</span><span class="callout"><b>2</b>VOL and ADSR knobs</span><span class="callout"><b>3</b>Envelope display</span><span class="callout"><b>4</b>Shared value fader</span></figcaption>
       </figure>
       <div class="parameter-grid">
@@ -89,8 +89,8 @@
       <h2>FX · Effects</h2>
       <p class="section-intro">An effect name button both selects the effect and toggles it on or off. Parameters remain editable while bypassed. The three central knobs always belong to the selected effect.</p>
       <figure class="sim-figure">
-        <div class="sim-toolbar"><strong>LVGL capture · FX</strong><span class="capture-status" data-ready="Captured from the live simulator" data-failed="Use the live simulator below">Capturing…</span></div>
-        <div class="sim-fallback">Capturing the FX page.</div><img class="sim-shot" data-sim-page="fx" src="../assets/screens/fx.png" alt="Tab5 Synth FX screen">
+        <div class="sim-toolbar"><strong>LVGL capture · FX</strong><span class="capture-status">Static LVGL simulator capture</span></div>
+        <img class="sim-shot" src="../assets/screens/fx.png" alt="Tab5 Synth FX screen">
         <figcaption class="callouts"><span class="callout"><b>1</b>Red lamp means enabled</span><span class="callout"><b>2</b>Selected effect</span><span class="callout"><b>3</b>Three effect parameters</span><span class="callout"><b>4</b>Signal flows left to right</span></figcaption>
       </figure>
       <div class="signal-chain"><span>DRY SOURCE</span><i>›</i><span>DELAY</span><i>›</i><span>CHORUS</span><i>›</i><span>DRIVE</span><i>›</i><span>CRUSH</span><i>›</i><span>OUTPUT</span></div>
@@ -106,8 +106,8 @@
       <h2>LFO · Automatic modulation</h2>
       <p class="section-intro">An LFO moves a selected control automatically with a slow waveform. All 17 AMP and FX targets keep their own Rate, Depth, Wave, and on/off state.</p>
       <figure class="sim-figure">
-        <div class="sim-toolbar"><strong>LVGL capture · LFO</strong><span class="capture-status" data-ready="Captured from the live simulator" data-failed="Use the live simulator below">Capturing…</span></div>
-        <div class="sim-fallback">Capturing the LFO page.</div><img class="sim-shot" data-sim-page="lfo" src="../assets/screens/lfo.png" alt="Tab5 Synth LFO screen">
+        <div class="sim-toolbar"><strong>LVGL capture · LFO</strong><span class="capture-status">Static LVGL simulator capture</span></div>
+        <img class="sim-shot" src="../assets/screens/lfo.png" alt="Tab5 Synth LFO screen">
         <figcaption class="callouts"><span class="callout"><b>1</b>TARGET follows your last parameter</span><span class="callout"><b>2</b>Per-target LFO on/off</span><span class="callout"><b>3</b>RAT and DEP</span><span class="callout"><b>4</b>Four waveforms</span></figcaption>
       </figure>
       <div class="steps">
@@ -126,8 +126,8 @@
       <h2>BANK · Presets and memories</h2>
       <p class="section-intro">Eleven presets provide starting sounds. M1–M5 are working-memory slots that retain your complete editing state as you move between them.</p>
       <figure class="sim-figure">
-        <div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status" data-ready="Captured from the live simulator" data-failed="Use the live simulator below">Capturing…</span></div>
-        <div class="sim-fallback">Capturing the BANK page.</div><img class="sim-shot" data-sim-page="bank" src="../assets/screens/bank.png" alt="Tab5 Synth BANK screen">
+        <div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status">Static LVGL simulator capture</span></div>
+        <img class="sim-shot" src="../assets/screens/bank.png" alt="Tab5 Synth BANK screen">
         <figcaption class="callouts"><span class="callout"><b>1</b>GTR–SYN fixed presets</span><span class="callout"><b>2</b>RND random patch</span><span class="callout"><b>3</b>M1–M5 work memories</span><span class="callout"><b>4</b>Current slot saves before switching</span></figcaption>
       </figure>
       <table><thead><tr><th>Buttons</th><th>Meaning</th><th>Character</th></tr></thead><tbody>
@@ -146,10 +146,8 @@
       <div class="keyboard-notes"><div><b>White keys</b><br>Natural notes C D E F G A B</div><div><b>Black keys</b><br>Sharp / flat semitones</div><div><b>Range</b><br>About two octaves from C3</div></div>
     </section>
 
-    <section id="simulator"><h2>Live LVGL simulator</h2><p class="section-intro">This is not a mock-up. It is the simulator built from the repository’s portable LVGL UI source. It is silent, but every source button, page, knob, fader, and key can be tried.</p><iframe class="live-sim" src="../simulator.html" title="Tab5 Synth LVGL simulator"></iframe><p class="note">Drag knobs, and tap or drag the bottom value fader. Verify MIC, I2S, and actual audio behavior on Tab5 hardware.</p></section>
   </main>
-  <iframe id="capture-simulator" src="../simulator.html" title="LVGL simulator for screen capture" aria-hidden="true"></iframe>
   <footer class="footer"><div style="width:min(var(--max),calc(100% - 32px));margin:auto">Tab5 Synth · <a href="https://github.com/airpocket-soundman/Tab5_synth">Source on GitHub</a> · Manual content follows the current repository implementation.</div></footer>
-  <script src="../assets/manual.js?v=20260723-3"></script>
+  <script src="../assets/manual.js?v=20260723-4"></script>
 </body>
 </html>
