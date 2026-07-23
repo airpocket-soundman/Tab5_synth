@@ -21,11 +21,11 @@ enum {
     C_LIME = 0xa7ad50,
     C_RED = 0xbf4838,
     C_BRASS = 0xa77a35,
-    CY_CYAN = 0x28e7f2,
-    CY_MAGENTA = 0xf04fbf,
-    CY_LIME = 0xb8f34a,
-    CY_AMBER = 0xffb52e,
-    CY_RED = 0xff4057,
+    NEON_CYAN = 0x28e7f2,
+    NEON_MAGENTA = 0xf04fbf,
+    NEON_LIME = 0xb8f34a,
+    NEON_AMBER = 0xffb52e,
+    NEON_RED = 0xff4057,
 };
 
 enum { PAGE_AMP, PAGE_FX, PAGE_LFO, PAGE_BANK, PAGE_COUNT };
@@ -240,14 +240,14 @@ static bool is_metal_theme(void)
     return current_theme == LVGL_SYNTH_THEME_METAL;
 }
 
-static bool is_cyberdeck_theme(void)
+static bool is_neon_theme(void)
 {
-    return current_theme == LVGL_SYNTH_THEME_CYBERDECK;
+    return current_theme == LVGL_SYNTH_THEME_NEON;
 }
 
 void lvgl_synth_ui_set_theme(lvgl_synth_theme_t theme)
 {
-    if(theme == LVGL_SYNTH_THEME_METAL || theme == LVGL_SYNTH_THEME_CYBERDECK) {
+    if(theme == LVGL_SYNTH_THEME_METAL || theme == LVGL_SYNTH_THEME_NEON) {
         current_theme = theme;
     } else {
         current_theme = LVGL_SYNTH_THEME_RETRO_WOOD;
@@ -316,7 +316,7 @@ static uint32_t metal_color(uint32_t value)
     }
 }
 
-static uint32_t cyberdeck_color(uint32_t value)
+static uint32_t neon_color(uint32_t value)
 {
     switch(value) {
         case 0x030302: return 0x020304;
@@ -353,7 +353,7 @@ static uint32_t cyberdeck_color(uint32_t value)
         case 0x414036: return 0x3c4b50;
         case 0x42d9c1: return 0x39e6dd;
         case 0x4d9f91: return 0x55c9c5;
-        case 0x4fb8b0: return CY_CYAN;
+        case 0x4fb8b0: return NEON_CYAN;
         case 0x514936: return 0x48565a;
         case 0x554d3e: return 0x46575d;
         case 0x555345: return 0x42565b;
@@ -365,11 +365,11 @@ static uint32_t cyberdeck_color(uint32_t value)
         case 0x766e58: return 0x68787d;
         case 0x8c672d: return 0x9b6131;
         case 0x9e9278: return 0x748186;
-        case 0xa77a35: return CY_MAGENTA;
-        case 0xa7ad50: return CY_LIME;
+        case 0xa77a35: return NEON_MAGENTA;
+        case 0xa7ad50: return NEON_LIME;
         case 0xaaa389: return 0xa5b4b7;
-        case 0xbf4838: return CY_RED;
-        case 0xe0a43b: return CY_AMBER;
+        case 0xbf4838: return NEON_RED;
+        case 0xe0a43b: return NEON_AMBER;
         case 0xe8ddbd: return 0xc8d0cc;
         case 0xf0e4c4: return 0xe6eeee;
         case 0xf2e7c8: return 0xaebbbe;
@@ -381,7 +381,7 @@ static uint32_t cyberdeck_color(uint32_t value)
 static lv_color_t col(uint32_t value)
 {
     if(current_theme == LVGL_SYNTH_THEME_METAL) return lv_color_hex(metal_color(value));
-    if(current_theme == LVGL_SYNTH_THEME_CYBERDECK) return lv_color_hex(cyberdeck_color(value));
+    if(current_theme == LVGL_SYNTH_THEME_NEON) return lv_color_hex(neon_color(value));
     return lv_color_hex(value);
 }
 
@@ -487,27 +487,27 @@ static lv_obj_t *make_panel(lv_obj_t *parent, int x, int y, int w, int h)
             lv_obj_set_style_bg_opa(top_reflection, LV_OPA_70, 0);
             lv_obj_set_style_bg_opa(bottom_reflection, LV_OPA_40, 0);
         }
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_style_radius(obj, 2, 0);
         lv_obj_set_style_bg_color(obj, lv_color_hex(0x111719), 0);
         lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0x080c0e), 0);
         lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, 0);
         lv_obj_set_style_border_width(obj, 2, 0);
-        lv_obj_set_style_border_color(obj, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_border_color(obj, lv_color_hex(NEON_CYAN), 0);
         lv_obj_set_style_border_opa(obj, LV_OPA_70, 0);
         lv_obj_set_style_outline_width(obj, 2, 0);
-        lv_obj_set_style_outline_color(obj, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_outline_color(obj, lv_color_hex(NEON_CYAN), 0);
         lv_obj_set_style_outline_opa(obj, LV_OPA_70, 0);
         lv_obj_set_style_outline_pad(obj, 1, 0);
         lv_obj_set_style_shadow_width(obj, 22, 0);
         lv_obj_set_style_shadow_ofs_y(obj, 0, 0);
-        lv_obj_set_style_shadow_color(obj, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_shadow_color(obj, lv_color_hex(NEON_CYAN), 0);
         lv_obj_set_style_shadow_opa(obj, LV_OPA_40, 0);
         {
-            make_neon_rect(obj, 18, 5, 80, 2, CY_CYAN, LV_OPA_COVER, 10);
-            make_neon_rect(obj, 102, 5, 34, 2, CY_MAGENTA, LV_OPA_COVER, 9);
-            make_neon_rect(obj, w - 113, h - 7, 54, 2, CY_LIME, LV_OPA_COVER, 9);
-            make_neon_rect(obj, w - 55, h - 7, 36, 2, CY_AMBER, LV_OPA_COVER, 9);
+            make_neon_rect(obj, 18, 5, 80, 2, NEON_CYAN, LV_OPA_COVER, 10);
+            make_neon_rect(obj, 102, 5, 34, 2, NEON_MAGENTA, LV_OPA_COVER, 9);
+            make_neon_rect(obj, w - 113, h - 7, 54, 2, NEON_LIME, LV_OPA_COVER, 9);
+            make_neon_rect(obj, w - 55, h - 7, 36, 2, NEON_AMBER, LV_OPA_COVER, 9);
         }
     }
     return obj;
@@ -533,7 +533,7 @@ static void add_screws(lv_obj_t *parent, int w, int h)
             lv_obj_set_style_shadow_color(screw, lv_color_hex(0x020304), 0);
             slot = make_rect(screw, 1, 2, 4, 1, 0x151a1e);
             lv_obj_set_style_bg_color(slot, lv_color_hex(0x273036), 0);
-        } else if(is_cyberdeck_theme()) {
+        } else if(is_neon_theme()) {
             lv_obj_t *core;
             lv_obj_set_size(screw, 8, 8);
             lv_obj_set_style_bg_color(screw, lv_color_hex(0x273136), 0);
@@ -623,7 +623,7 @@ static ui_button_t make_button(lv_obj_t *parent, const char *text, int x, int y,
         lv_obj_set_style_outline_pad(result.obj, 1, 0);
         lv_obj_set_style_shadow_width(result.obj, 8, 0);
         lv_obj_set_style_shadow_ofs_y(result.obj, 5, 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_style_radius(result.obj, 2, 0);
         lv_obj_set_style_bg_color(result.obj, lv_color_hex(0x293438), 0);
         lv_obj_set_style_bg_grad_color(result.obj, lv_color_hex(0x0b1012), 0);
@@ -659,7 +659,7 @@ static ui_button_t make_button(lv_obj_t *parent, const char *text, int x, int y,
     lv_obj_remove_flag(result.lamp, LV_OBJ_FLAG_CLICKABLE);
     no_scroll(result.lamp);
     result.rail = make_rect(result.obj, 2, 5, 3, h - 12, C_LINE);
-    lv_obj_set_style_bg_opa(result.rail, is_cyberdeck_theme() ? LV_OPA_50 : LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(result.rail, is_neon_theme() ? LV_OPA_50 : LV_OPA_TRANSP, 0);
     return result;
 }
 
@@ -694,7 +694,7 @@ static void style_button(ui_button_t *button, bool latched, bool focused, bool l
                                   lit ? col(accent) : lv_color_hex(0x11171a), 0);
         lv_obj_set_style_border_color(button->lamp,
                                       lit ? lv_color_hex(0xe7edf0) : lv_color_hex(0x66737a), 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_style_bg_color(button->obj,
                                   lv_color_hex(latched ? 0x101618 : 0x273237), 0);
         lv_obj_set_style_bg_grad_color(button->obj,
@@ -852,11 +852,11 @@ static void style_rotary(rotary_knob_t *knob, bool selected, uint32_t accent)
         lv_obj_set_style_text_color(knob->value, lv_color_hex(0xf0f3f4), 0);
         lv_obj_set_style_text_color(knob->caption,
                                     selected ? col(accent) : lv_color_hex(0xb5c0c5), 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         for(tick = 0; tick < 11; ++tick) {
             lv_obj_set_style_line_color(knob->ticks[tick],
-                                        tick == 0 ? lv_color_hex(CY_MAGENTA) :
-                                        (tick == 10 ? lv_color_hex(CY_LIME) : col(accent)), 0);
+                                        tick == 0 ? lv_color_hex(NEON_MAGENTA) :
+                                        (tick == 10 ? lv_color_hex(NEON_LIME) : col(accent)), 0);
             lv_obj_set_style_line_opa(knob->ticks[tick], selected ? LV_OPA_COVER : LV_OPA_70, 0);
         }
         lv_obj_set_style_bg_color(knob->rim, lv_color_hex(0x070a0b), 0);
@@ -889,10 +889,10 @@ static void style_amp_envelope_dot(lv_obj_t *dot, bool active)
     lv_obj_set_style_shadow_width(dot, active ? 6 : 0, 0);
     lv_obj_set_style_shadow_spread(dot, active ? 1 : 0, 0);
     lv_obj_set_style_shadow_opa(dot, active ? LV_OPA_50 : LV_OPA_TRANSP, 0);
-    if(is_cyberdeck_theme()) {
-        lv_obj_set_style_bg_color(dot, lv_color_hex(active ? CY_CYAN : 0x163237), 0);
+    if(is_neon_theme()) {
+        lv_obj_set_style_bg_color(dot, lv_color_hex(active ? NEON_CYAN : 0x163237), 0);
         lv_obj_set_style_bg_opa(dot, active ? LV_OPA_COVER : LV_OPA_30, 0);
-        lv_obj_set_style_shadow_color(dot, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_shadow_color(dot, lv_color_hex(NEON_CYAN), 0);
         lv_obj_set_style_shadow_width(dot, active ? 4 : 0, 0);
         lv_obj_set_style_shadow_opa(dot, active ? LV_OPA_30 : LV_OPA_TRANSP, 0);
     }
@@ -1625,7 +1625,7 @@ static void refresh_ui(void)
 
 static void cycle_theme_async(void *unused)
 {
-    static const char *const names[] = {"WOOD THEME", "METAL THEME", "CYBERDECK THEME"};
+    static const char *const names[] = {"WOOD THEME", "METAL THEME", "NEON THEME"};
     lv_obj_t *screen = lv_screen_active();
     (void)unused;
     current_theme = (lvgl_synth_theme_t)(((int)current_theme + 1) % 3);
@@ -1654,20 +1654,20 @@ static void create_header(lv_obj_t *screen)
         lv_obj_set_style_shadow_width(header, 6, 0);
         lv_obj_set_style_shadow_ofs_y(header, 3, 0);
         lv_obj_set_style_shadow_color(header, lv_color_hex(0x020304), 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_style_bg_color(header, lv_color_hex(0x080d0f), 0);
         lv_obj_set_style_bg_grad_color(header, lv_color_hex(0x1b2528), 0);
         lv_obj_set_style_bg_grad_dir(header, LV_GRAD_DIR_VER, 0);
-        lv_obj_set_style_border_color(header, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_border_color(header, lv_color_hex(NEON_CYAN), 0);
         lv_obj_set_style_shadow_width(header, 20, 0);
         lv_obj_set_style_shadow_ofs_y(header, 0, 0);
-        lv_obj_set_style_shadow_color(header, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_shadow_color(header, lv_color_hex(NEON_CYAN), 0);
         lv_obj_set_style_shadow_opa(header, LV_OPA_60, 0);
-        make_neon_rect(header, 330, 8, 72, 2, CY_CYAN, LV_OPA_COVER, 10);
-        make_neon_rect(header, 406, 8, 34, 2, CY_MAGENTA, LV_OPA_COVER, 9);
-        make_neon_rect(header, 444, 8, 52, 2, CY_LIME, LV_OPA_COVER, 9);
-        make_neon_rect(header, 1087, 32, 38, 2, CY_AMBER, LV_OPA_COVER, 8);
-        make_neon_rect(header, 1129, 32, 76, 2, CY_RED, LV_OPA_COVER, 9);
+        make_neon_rect(header, 330, 8, 72, 2, NEON_CYAN, LV_OPA_COVER, 10);
+        make_neon_rect(header, 406, 8, 34, 2, NEON_MAGENTA, LV_OPA_COVER, 9);
+        make_neon_rect(header, 444, 8, 52, 2, NEON_LIME, LV_OPA_COVER, 9);
+        make_neon_rect(header, 1087, 32, 38, 2, NEON_AMBER, LV_OPA_COVER, 8);
+        make_neon_rect(header, 1129, 32, 76, 2, NEON_RED, LV_OPA_COVER, 9);
     }
     make_rect(header, 0, 0, 9, 42, C_RED);
     {
@@ -1803,12 +1803,12 @@ static void create_rotary_knob(lv_obj_t *parent, rotary_knob_t *knob, int x, int
         lv_obj_set_style_outline_pad(knob->rim, 1, 0);
         lv_obj_set_style_shadow_width(knob->rim, 10, 0);
         lv_obj_set_style_shadow_ofs_y(knob->rim, 5, 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_style_bg_color(knob->rim, lv_color_hex(0x06090a), 0);
         lv_obj_set_style_border_width(knob->rim, 3, 0);
         lv_obj_set_style_border_color(knob->rim, lv_color_hex(0x53666b), 0);
         lv_obj_set_style_outline_width(knob->rim, 2, 0);
-        lv_obj_set_style_outline_color(knob->rim, lv_color_hex(CY_MAGENTA), 0);
+        lv_obj_set_style_outline_color(knob->rim, lv_color_hex(NEON_MAGENTA), 0);
         lv_obj_set_style_outline_opa(knob->rim, LV_OPA_30, 0);
         lv_obj_set_style_outline_pad(knob->rim, 1, 0);
         lv_obj_set_style_shadow_width(knob->rim, 11, 0);
@@ -1832,7 +1832,7 @@ static void create_rotary_knob(lv_obj_t *parent, rotary_knob_t *knob, int x, int
         lv_obj_set_style_bg_grad_color(knob->body, lv_color_hex(0x20292e), 0);
         lv_obj_set_style_border_width(knob->body, 2, 0);
         lv_obj_set_style_border_color(knob->body, lv_color_hex(0xc1c9cd), 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_style_bg_color(knob->body, lv_color_hex(0x263236), 0);
         lv_obj_set_style_bg_grad_color(knob->body, lv_color_hex(0x080c0d), 0);
         lv_obj_set_style_border_width(knob->body, 3, 0);
@@ -1844,7 +1844,7 @@ static void create_rotary_knob(lv_obj_t *parent, rotary_knob_t *knob, int x, int
     if(is_metal_theme()) {
         lv_obj_set_style_bg_color(highlight, lv_color_hex(0xe4eaec), 0);
         lv_obj_set_style_bg_opa(highlight, LV_OPA_30, 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_pos(highlight, 12, 8);
         lv_obj_set_size(highlight, 25, 3);
         lv_obj_set_style_bg_color(highlight, lv_color_hex(0x607075), 0);
@@ -1868,7 +1868,7 @@ static void create_rotary_knob(lv_obj_t *parent, rotary_knob_t *knob, int x, int
     lv_obj_set_pos(knob->value, x + 20, y + 37);
     lv_obj_set_width(knob->value, 52);
     lv_obj_set_style_text_align(knob->value, LV_TEXT_ALIGN_CENTER, 0);
-    if(is_cyberdeck_theme()) {
+    if(is_neon_theme()) {
         lv_obj_set_style_bg_color(knob->value, lv_color_hex(0x02080a), 0);
         lv_obj_set_style_bg_opa(knob->value, LV_OPA_80, 0);
         lv_obj_set_style_border_width(knob->value, 1, 0);
@@ -1923,14 +1923,14 @@ static void create_amp_page(lv_obj_t *parent)
             lv_obj_set_style_outline_pad(amp_envelope_module, 1, 0);
             lv_obj_set_style_shadow_color(amp_envelope_module, lv_color_hex(0x020405), 0);
             lv_obj_set_style_shadow_opa(amp_envelope_module, LV_OPA_80, 0);
-        } else if(is_cyberdeck_theme()) {
+        } else if(is_neon_theme()) {
             lv_obj_set_style_radius(amp_envelope_module, 2, 0);
             lv_obj_set_style_bg_color(amp_envelope_module, lv_color_hex(0x02090a), 0);
             lv_obj_set_style_bg_grad_color(amp_envelope_module, lv_color_hex(0x062126), 0);
             lv_obj_set_style_border_width(amp_envelope_module, 3, 0);
             lv_obj_set_style_border_color(amp_envelope_module, lv_color_hex(0x4f676c), 0);
             lv_obj_set_style_outline_width(amp_envelope_module, 2, 0);
-            lv_obj_set_style_outline_color(amp_envelope_module, lv_color_hex(CY_MAGENTA), 0);
+            lv_obj_set_style_outline_color(amp_envelope_module, lv_color_hex(NEON_MAGENTA), 0);
             lv_obj_set_style_outline_opa(amp_envelope_module, LV_OPA_50, 0);
             lv_obj_set_style_outline_pad(amp_envelope_module, 1, 0);
             lv_obj_set_style_shadow_color(amp_envelope_module, lv_color_hex(0x010304), 0);
@@ -1969,8 +1969,8 @@ static void create_amp_page(lv_obj_t *parent)
             lv_obj_set_pos(amp_stage_labels[i], 0, 56);
             lv_obj_set_width(amp_stage_labels[i], 20);
             lv_obj_set_style_text_align(amp_stage_labels[i], LV_TEXT_ALIGN_CENTER, 0);
-            if(is_cyberdeck_theme()) {
-                const uint32_t stage_colors[4] = {CY_CYAN, CY_MAGENTA, CY_LIME, CY_RED};
+            if(is_neon_theme()) {
+                const uint32_t stage_colors[4] = {NEON_CYAN, NEON_MAGENTA, NEON_LIME, NEON_RED};
                 lv_obj_set_style_text_color(amp_stage_labels[i], lv_color_hex(stage_colors[i]), 0);
             }
         }
@@ -2061,11 +2061,11 @@ static void create_editor(lv_obj_t *screen)
         lv_obj_set_style_bg_color(engraved_rule, lv_color_hex(0xa1abb0), 0);
         lv_obj_set_style_bg_opa(engraved_rule, LV_OPA_40, 0);
         make_rect(editor, 14, 315, 622, 1, 0x030302);
-    } else if(is_cyberdeck_theme()) {
-        make_neon_rect(editor, 14, 314, 160, 2, CY_CYAN, LV_OPA_COVER, 8);
-        make_neon_rect(editor, 178, 314, 96, 2, CY_MAGENTA, LV_OPA_COVER, 8);
-        make_neon_rect(editor, 278, 314, 170, 2, CY_LIME, LV_OPA_COVER, 8);
-        make_neon_rect(editor, 452, 314, 184, 2, CY_AMBER, LV_OPA_COVER, 8);
+    } else if(is_neon_theme()) {
+        make_neon_rect(editor, 14, 314, 160, 2, NEON_CYAN, LV_OPA_COVER, 8);
+        make_neon_rect(editor, 178, 314, 96, 2, NEON_MAGENTA, LV_OPA_COVER, 8);
+        make_neon_rect(editor, 278, 314, 170, 2, NEON_LIME, LV_OPA_COVER, 8);
+        make_neon_rect(editor, 452, 314, 184, 2, NEON_AMBER, LV_OPA_COVER, 8);
     }
     target_label = make_label(editor, "BASE / VOL", &lv_font_montserrat_12, C_AMBER);
     lv_obj_set_pos(target_label, 22, 326);
@@ -2094,13 +2094,13 @@ static void create_editor(lv_obj_t *screen)
             lv_obj_set_style_outline_pad(slot, 0, 0);
             lv_obj_set_style_shadow_width(slot, 7, 0);
             lv_obj_set_style_shadow_ofs_y(slot, 3, 0);
-        } else if(is_cyberdeck_theme()) {
+        } else if(is_neon_theme()) {
             lv_obj_set_style_radius(slot, 1, 0);
             lv_obj_set_style_bg_color(slot, lv_color_hex(0x020607), 0);
             lv_obj_set_style_border_width(slot, 3, 0);
             lv_obj_set_style_border_color(slot, lv_color_hex(0x31474c), 0);
             lv_obj_set_style_outline_width(slot, 1, 0);
-            lv_obj_set_style_outline_color(slot, lv_color_hex(CY_MAGENTA), 0);
+            lv_obj_set_style_outline_color(slot, lv_color_hex(NEON_MAGENTA), 0);
             lv_obj_set_style_outline_opa(slot, LV_OPA_40, 0);
             lv_obj_set_style_shadow_width(slot, 7, 0);
             lv_obj_set_style_shadow_ofs_y(slot, 3, 0);
@@ -2111,9 +2111,9 @@ static void create_editor(lv_obj_t *screen)
             make_rect(editor, x, 356, 2, h, tick == 0 || tick == 10 ? C_BRASS : C_LINE);
             make_rect(editor, x, 381 - h, 2, h, tick == 0 || tick == 10 ? C_BRASS : C_LINE);
         }
-        if(is_cyberdeck_theme()) {
+        if(is_neon_theme()) {
             for(tick = 0; tick < 24; ++tick) {
-                const uint32_t rails[5] = {CY_CYAN, CY_MAGENTA, CY_LIME, CY_AMBER, CY_RED};
+                const uint32_t rails[5] = {NEON_CYAN, NEON_MAGENTA, NEON_LIME, NEON_AMBER, NEON_RED};
                 lv_obj_t *segment = make_rect(editor, 30 + tick * 24, 369, 17, 3, rails[tick * 5 / 24]);
                 lv_obj_set_style_bg_opa(segment, LV_OPA_70, 0);
             }
@@ -2158,12 +2158,12 @@ static void create_editor(lv_obj_t *screen)
         lv_obj_set_style_shadow_width(fader_cap, 10, 0);
         lv_obj_set_style_shadow_ofs_y(fader_cap, 5, 0);
         lv_obj_set_style_shadow_opa(fader_cap, LV_OPA_80, 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_style_bg_color(fader_cap, lv_color_hex(0x3d4b50), 0);
         lv_obj_set_style_bg_grad_color(fader_cap, lv_color_hex(0x0a0f11), 0);
         lv_obj_set_style_border_color(fader_cap, lv_color_hex(0x718186), 0);
         lv_obj_set_style_outline_width(fader_cap, 1, 0);
-        lv_obj_set_style_outline_color(fader_cap, lv_color_hex(CY_MAGENTA), 0);
+        lv_obj_set_style_outline_color(fader_cap, lv_color_hex(NEON_MAGENTA), 0);
         lv_obj_set_style_outline_opa(fader_cap, LV_OPA_60, 0);
         lv_obj_set_style_outline_pad(fader_cap, 1, 0);
         lv_obj_set_style_shadow_width(fader_cap, 10, 0);
@@ -2186,13 +2186,13 @@ static void create_editor(lv_obj_t *screen)
             lv_obj_set_style_bg_color(groove_b, lv_color_hex(0x344047), 0);
             lv_obj_set_style_border_color(groove_a, lv_color_hex(0xaeb9be), 0);
             lv_obj_set_style_border_color(groove_b, lv_color_hex(0xaeb9be), 0);
-        } else if(is_cyberdeck_theme()) {
+        } else if(is_neon_theme()) {
             lv_obj_set_style_bg_color(bevel, lv_color_hex(0x7e9095), 0);
             lv_obj_set_style_bg_opa(bevel, LV_OPA_30, 0);
             lv_obj_set_style_bg_color(groove_a, lv_color_hex(0x050809), 0);
             lv_obj_set_style_bg_color(groove_b, lv_color_hex(0x050809), 0);
-            lv_obj_set_style_border_color(groove_a, lv_color_hex(CY_CYAN), 0);
-            lv_obj_set_style_border_color(groove_b, lv_color_hex(CY_LIME), 0);
+            lv_obj_set_style_border_color(groove_a, lv_color_hex(NEON_CYAN), 0);
+            lv_obj_set_style_border_color(groove_b, lv_color_hex(NEON_LIME), 0);
         }
     }
 }
@@ -2234,28 +2234,28 @@ static void create_xy(lv_obj_t *screen)
         lv_obj_set_style_shadow_ofs_y(pad, 3, 0);
         lv_obj_set_style_shadow_color(pad, lv_color_hex(0x020304), 0);
         lv_obj_set_style_shadow_opa(pad, LV_OPA_70, 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_style_radius(pad, 1, 0);
         lv_obj_set_style_bg_color(pad, lv_color_hex(0x02090b), 0);
         lv_obj_set_style_bg_grad_color(pad, lv_color_hex(0x0a1a1d), 0);
         lv_obj_set_style_bg_grad_dir(pad, LV_GRAD_DIR_VER, 0);
         lv_obj_set_style_border_width(pad, 5, 0);
-        lv_obj_set_style_border_color(pad, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_border_color(pad, lv_color_hex(NEON_CYAN), 0);
         lv_obj_set_style_outline_width(pad, 4, 0);
-        lv_obj_set_style_outline_color(pad, lv_color_hex(CY_MAGENTA), 0);
+        lv_obj_set_style_outline_color(pad, lv_color_hex(NEON_MAGENTA), 0);
         lv_obj_set_style_outline_opa(pad, LV_OPA_COVER, 0);
         lv_obj_set_style_outline_pad(pad, 1, 0);
         lv_obj_set_style_shadow_width(pad, 28, 0);
         lv_obj_set_style_shadow_ofs_y(pad, 0, 0);
-        lv_obj_set_style_shadow_color(pad, lv_color_hex(CY_CYAN), 0);
+        lv_obj_set_style_shadow_color(pad, lv_color_hex(NEON_CYAN), 0);
         lv_obj_set_style_shadow_opa(pad, LV_OPA_70, 0);
     }
     for(i = 1; i < 4; ++i) {
         lv_obj_t *vertical = make_rect(pad, i * 141, 0, 1, 304, 0x3d4035);
         lv_obj_t *horizontal = make_rect(pad, 0, i * 76, 566, 1, 0x3d4035);
-        if(is_cyberdeck_theme()) {
-            lv_obj_set_style_bg_color(vertical, lv_color_hex(CY_CYAN), 0);
-            lv_obj_set_style_bg_color(horizontal, lv_color_hex(CY_MAGENTA), 0);
+        if(is_neon_theme()) {
+            lv_obj_set_style_bg_color(vertical, lv_color_hex(NEON_CYAN), 0);
+            lv_obj_set_style_bg_color(horizontal, lv_color_hex(NEON_MAGENTA), 0);
             lv_obj_set_style_bg_opa(vertical, LV_OPA_30, 0);
             lv_obj_set_style_bg_opa(horizontal, LV_OPA_30, 0);
         }
@@ -2270,14 +2270,14 @@ static void create_xy(lv_obj_t *screen)
     lv_obj_set_style_border_color(xy_marker, col(C_TEXT), 0);
     lv_obj_set_style_shadow_width(xy_marker, 9, 0);
     lv_obj_set_style_shadow_color(xy_marker, col(C_RED), 0);
-    if(is_cyberdeck_theme()) {
+    if(is_neon_theme()) {
         lv_obj_set_style_bg_color(xy_marker, lv_color_hex(0x071012), 0);
         lv_obj_set_style_border_color(xy_marker, lv_color_hex(0xe5f6ac), 0);
-        lv_obj_set_style_shadow_color(xy_marker, lv_color_hex(CY_LIME), 0);
+        lv_obj_set_style_shadow_color(xy_marker, lv_color_hex(NEON_LIME), 0);
         lv_obj_set_style_shadow_width(xy_marker, 6, 0);
         lv_obj_set_style_shadow_opa(xy_marker, LV_OPA_40, 0);
-        make_rect(xy_marker, 2, 8, 14, 2, CY_LIME);
-        make_rect(xy_marker, 8, 2, 2, 14, CY_AMBER);
+        make_rect(xy_marker, 2, 8, 14, 2, NEON_LIME);
+        make_rect(xy_marker, 8, 2, 2, 14, NEON_AMBER);
     }
     lv_obj_remove_flag(xy_marker, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(xy_marker, LV_OBJ_FLAG_HIDDEN);
@@ -2320,18 +2320,18 @@ static void create_keyboard(lv_obj_t *screen)
         lv_obj_set_style_outline_width(keyboard, 1, 0);
         lv_obj_set_style_outline_color(keyboard, lv_color_hex(0x05080a), 0);
         lv_obj_set_style_outline_pad(keyboard, 1, 0);
-    } else if(is_cyberdeck_theme()) {
+    } else if(is_neon_theme()) {
         lv_obj_set_style_bg_color(keyboard, lv_color_hex(0x101719), 0);
         lv_obj_set_style_bg_grad_color(keyboard, lv_color_hex(0x06090b), 0);
         lv_obj_set_style_bg_grad_dir(keyboard, LV_GRAD_DIR_VER, 0);
         lv_obj_set_style_border_color(keyboard, lv_color_hex(0x4d6166), 0);
         lv_obj_set_style_outline_width(keyboard, 3, 0);
-        lv_obj_set_style_outline_color(keyboard, lv_color_hex(CY_MAGENTA), 0);
+        lv_obj_set_style_outline_color(keyboard, lv_color_hex(NEON_MAGENTA), 0);
         lv_obj_set_style_outline_opa(keyboard, LV_OPA_COVER, 0);
         lv_obj_set_style_outline_pad(keyboard, 1, 0);
         lv_obj_set_style_shadow_width(keyboard, 22, 0);
         lv_obj_set_style_shadow_ofs_y(keyboard, 0, 0);
-        lv_obj_set_style_shadow_color(keyboard, lv_color_hex(CY_MAGENTA), 0);
+        lv_obj_set_style_shadow_color(keyboard, lv_color_hex(NEON_MAGENTA), 0);
         lv_obj_set_style_shadow_opa(keyboard, LV_OPA_50, 0);
     }
     add_screws(keyboard, 1252, 162);
@@ -2344,23 +2344,23 @@ static void create_keyboard(lv_obj_t *screen)
             lv_obj_set_style_shadow_width(key_bed, 6, 0);
             lv_obj_set_style_shadow_ofs_y(key_bed, 2, 0);
             lv_obj_set_style_shadow_color(key_bed, lv_color_hex(0x010203), 0);
-            make_rect(key_bed, 5, 3, 260, 3, CY_CYAN);
-            make_rect(key_bed, 270, 3, 180, 3, CY_MAGENTA);
-            make_rect(key_bed, 455, 3, 310, 3, CY_LIME);
-            make_rect(key_bed, 770, 3, 220, 3, CY_AMBER);
-            make_rect(key_bed, 995, 3, 220, 3, CY_RED);
-        } else if(is_cyberdeck_theme()) {
+            make_rect(key_bed, 5, 3, 260, 3, NEON_CYAN);
+            make_rect(key_bed, 270, 3, 180, 3, NEON_MAGENTA);
+            make_rect(key_bed, 455, 3, 310, 3, NEON_LIME);
+            make_rect(key_bed, 770, 3, 220, 3, NEON_AMBER);
+            make_rect(key_bed, 995, 3, 220, 3, NEON_RED);
+        } else if(is_neon_theme()) {
             lv_obj_set_style_bg_color(key_bed, lv_color_hex(0x020405), 0);
             lv_obj_set_style_border_width(key_bed, 2, 0);
             lv_obj_set_style_border_color(key_bed, lv_color_hex(0x3c5055), 0);
             lv_obj_set_style_shadow_width(key_bed, 7, 0);
             lv_obj_set_style_shadow_ofs_y(key_bed, 3, 0);
             lv_obj_set_style_shadow_color(key_bed, lv_color_hex(0x010203), 0);
-            make_neon_rect(key_bed, 5, 3, 260, 2, CY_CYAN, LV_OPA_COVER, 8);
-            make_neon_rect(key_bed, 270, 3, 180, 2, CY_MAGENTA, LV_OPA_COVER, 8);
-            make_neon_rect(key_bed, 455, 3, 310, 2, CY_LIME, LV_OPA_COVER, 8);
-            make_neon_rect(key_bed, 770, 3, 220, 2, CY_AMBER, LV_OPA_COVER, 8);
-            make_neon_rect(key_bed, 995, 3, 220, 2, CY_RED, LV_OPA_COVER, 8);
+            make_neon_rect(key_bed, 5, 3, 260, 2, NEON_CYAN, LV_OPA_COVER, 8);
+            make_neon_rect(key_bed, 270, 3, 180, 2, NEON_MAGENTA, LV_OPA_COVER, 8);
+            make_neon_rect(key_bed, 455, 3, 310, 2, NEON_LIME, LV_OPA_COVER, 8);
+            make_neon_rect(key_bed, 770, 3, 220, 2, NEON_AMBER, LV_OPA_COVER, 8);
+            make_neon_rect(key_bed, 995, 3, 220, 2, NEON_RED, LV_OPA_COVER, 8);
         }
     }
     for(i = 0; i < 15; ++i) {
@@ -2393,7 +2393,7 @@ static void create_keyboard(lv_obj_t *screen)
             lv_obj_set_style_shadow_width(key, 4, 0);
             lv_obj_set_style_shadow_ofs_y(key, 4, 0);
             lv_obj_set_style_shadow_opa(key, LV_OPA_80, 0);
-        } else if(is_cyberdeck_theme()) {
+        } else if(is_neon_theme()) {
             lv_obj_set_style_bg_color(key, lv_color_hex(0xc8d0cc), 0);
             lv_obj_set_style_bg_grad_color(key, lv_color_hex(0x869397), 0);
             lv_obj_set_style_bg_grad_dir(key, LV_GRAD_DIR_VER, 0);
@@ -2440,7 +2440,7 @@ static void create_keyboard(lv_obj_t *screen)
             lv_obj_set_style_shadow_width(key, 9, 0);
             lv_obj_set_style_shadow_ofs_y(key, 6, 0);
             lv_obj_set_style_shadow_opa(key, LV_OPA_80, 0);
-        } else if(is_cyberdeck_theme()) {
+        } else if(is_neon_theme()) {
             lv_obj_set_style_bg_color(key, lv_color_hex(0x1c2528), 0);
             lv_obj_set_style_bg_grad_color(key, lv_color_hex(0x050809), 0);
             lv_obj_set_style_bg_grad_dir(key, LV_GRAD_DIR_VER, 0);
@@ -2479,8 +2479,8 @@ static void create_background(lv_obj_t *screen)
     const char *source = "A:/assets/walnut-background.png";
     if(current_theme == LVGL_SYNTH_THEME_METAL) {
         source = "A:/assets/metal-hairline-background.png";
-    } else if(current_theme == LVGL_SYNTH_THEME_CYBERDECK) {
-        source = "A:/assets/cyberdeck-digital-background.png";
+    } else if(current_theme == LVGL_SYNTH_THEME_NEON) {
+        source = "A:/assets/neon-digital-background.png";
     }
     lv_image_set_src(background, source);
     lv_obj_set_pos(background, 0, 0);

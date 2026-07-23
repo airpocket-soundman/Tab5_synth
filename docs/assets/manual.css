@@ -115,6 +115,15 @@ h3 { margin: 0 0 8px; }
   font-weight: 900;
   letter-spacing: .16em;
 }
+.skin-shot {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-bottom: 1px solid var(--line);
+  background: #050706;
+}
+.skin-shot[src] + .skin-preview { display: none; }
 .skin-card[data-skin="wood"] .skin-preview {
   color: #f0dca4;
   background:
@@ -129,7 +138,7 @@ h3 { margin: 0 0 8px; }
     linear-gradient(135deg, #202b30, #77858c 52%, #273238);
   box-shadow: inset 0 0 0 3px #aab5ba;
 }
-.skin-card[data-skin="cyber"] .skin-preview {
+.skin-card[data-skin="neon"] .skin-preview {
   color: #65f5ed;
   background:
     linear-gradient(90deg, #21d9d833 1px, transparent 1px),

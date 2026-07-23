@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="M5Stack Tab5 Synth 中文用户手册：音源、AMP、FX、LFO、音色库、包络、XY 触控板和键盘。">
   <title>Tab5 Synth 用户手册</title>
-  <link rel="stylesheet" href="../assets/manual.css?v=20260723-3">
+  <link rel="stylesheet" href="../assets/manual.css?v=20260723-4">
 </head>
 <body>
   <header class="site-header"><nav class="nav" aria-label="主导航">
@@ -32,14 +32,14 @@
       <h2>三种界面皮肤</h2>
       <p class="section-intro">操作界面提供三种外观。切换皮肤只改变显示效果，不会改变音色参数、效果器、LFO 设置或当前演奏状态。</p>
       <div class="skin-grid">
-        <article class="skin-card" data-skin="wood"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>默认皮肤，采用胡桃木、黄铜和暖色琴键，呈现复古乐器风格。</p></div></article>
-        <article class="skin-card" data-skin="metal"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>使用拉丝金属、银色边框和深色控制面板，接近录音室设备风格。</p></div></article>
-        <article class="skin-card" data-skin="cyber"><div class="skin-preview">CYBERDECK</div><div class="skin-copy"><h3>Cyberdeck</h3><p>使用青色、品红色、黄绿色发光元素和数字网格的霓虹风格。</p></div></article>
+        <article class="skin-card" data-skin="wood"><img class="skin-shot" data-sim-skin="wood" src="../assets/screens/skin-wood.png" alt="Retro Wood 皮肤的 AMP 画面"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>默认皮肤，采用胡桃木、黄铜和暖色琴键，呈现复古乐器风格。</p></div></article>
+        <article class="skin-card" data-skin="metal"><img class="skin-shot" data-sim-skin="metal" src="../assets/screens/skin-metal.png" alt="Metal 皮肤的 AMP 画面"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>使用拉丝金属、银色边框和深色控制面板，接近录音室设备风格。</p></div></article>
+        <article class="skin-card" data-skin="neon"><img class="skin-shot" data-sim-skin="neon" src="../assets/screens/skin-neon.png" alt="Neon 皮肤的 AMP 画面"><div class="skin-preview">NEON</div><div class="skin-copy"><h3>Neon</h3><p>使用青色、品红色、黄绿色发光元素和数字网格的霓虹风格。</p></div></article>
       </div>
       <div class="steps">
         <article class="step"><h3>点击左上角</h3><p>点击左上角的 <b>TAB5 / PERFORMANCE SYNTHESIZER</b> 区域，或点击 <b>01 SOURCE</b> 标题区域。</p></article>
-        <article class="step"><h3>依次切换</h3><p>每次点击按 <b>WOOD → METAL → CYBERDECK → WOOD</b> 的顺序切换。</p></article>
-        <article class="step"><h3>确认状态</h3><p>顶部状态栏会显示 <b>WOOD THEME</b>、<b>METAL THEME</b> 或 <b>CYBERDECK THEME</b>。</p></article>
+        <article class="step"><h3>依次切换</h3><p>每次点击按 <b>WOOD → METAL → NEON → WOOD</b> 的顺序切换。</p></article>
+        <article class="step"><h3>确认状态</h3><p>顶部状态栏会显示 <b>WOOD THEME</b>、<b>METAL THEME</b> 或 <b>NEON THEME</b>。</p></article>
       </div>
       <p class="note"><b>启动皮肤：</b>当前实现每次启动时使用 Retro Wood。皮肤选择不会保存在 M1–M5 中。</p>
     </section>
@@ -95,6 +95,6 @@
   </main>
   <iframe id="capture-simulator" src="../simulator.html" title="用于截图的 LVGL 模拟器" aria-hidden="true"></iframe>
   <footer class="footer"><div style="width:min(var(--max),calc(100% - 32px));margin:auto">Tab5 Synth · <a href="https://github.com/airpocket-soundman/Tab5_synth">GitHub 源码</a> · 手册内容依据当前仓库实现。</div></footer>
-  <script src="../assets/manual.js?v=20260723-2"></script>
+  <script src="../assets/manual.js?v=20260723-3"></script>
 </body>
 </html>

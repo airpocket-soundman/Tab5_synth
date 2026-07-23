@@ -25,9 +25,13 @@
 
   const frame = document.getElementById("capture-simulator");
   const shots = [...document.querySelectorAll("[data-sim-page]")];
-  if (!frame || shots.length === 0) return;
+  const skinShots = [...document.querySelectorAll("[data-sim-skin]")];
+  if (!frame || (shots.length === 0 && skinShots.length === 0)) return;
   shots.forEach(image => {
     if (image.getAttribute("src")) image.parentElement.querySelector(".sim-fallback")?.remove();
+  });
+  skinShots.forEach(image => {
+    if (image.getAttribute("src")) image.parentElement.querySelector(".skin-preview")?.remove();
   });
 
   const pageX = { amp: 86, fx: 203, lfo: 320, bank: 437 };
@@ -83,6 +87,31 @@
         const status = image.closest(".sim-figure")?.querySelector(".capture-status");
         if (status) status.textContent = status.dataset.ready;
       }
+
+      pointer(canvas, "pointerdown", pageX.amp, pageY);
+      await new Promise(resolve => setTimeout(resolve, 70));
+      pointer(canvas, "pointerup", pageX.amp, pageY);
+      await new Promise(resolve => setTimeout(resolve, 220));
+
+      const skinOrder = ["wood", "metal", "neon"];
+      for (let index = 0; index < skinOrder.length; index += 1) {
+        const image = skinShots.find(item => item.dataset.simSkin === skinOrder[index]);
+        if (image) {
+          image.src = canvas.toDataURL("image/png");
+          image.hidden = false;
+          image.parentElement.querySelector(".skin-preview")?.remove();
+        }
+        if (index < skinOrder.length - 1) {
+          pointer(canvas, "pointerdown", 100, 20);
+          await new Promise(resolve => setTimeout(resolve, 70));
+          pointer(canvas, "pointerup", 100, 20);
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+
+      pointer(canvas, "pointerdown", 100, 20);
+      await new Promise(resolve => setTimeout(resolve, 70));
+      pointer(canvas, "pointerup", 100, 20);
     } catch (error) {
       document.querySelectorAll(".capture-status").forEach(status => {
         status.textContent = status.dataset.failed;

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="English user manual for the M5Stack Tab5 Synth: sources, AMP, FX, LFO, banks, envelope, XY pad, and keyboard.">
   <title>Tab5 Synth User Manual</title>
-  <link rel="stylesheet" href="../assets/manual.css?v=20260723-3">
+  <link rel="stylesheet" href="../assets/manual.css?v=20260723-4">
 </head>
 <body>
   <header class="site-header"><nav class="nav" aria-label="Main navigation">
@@ -38,14 +38,14 @@
       <h2>Three UI skins</h2>
       <p class="section-intro">The interface has three visual skins. Changing skin affects appearance only; sound parameters, effects, LFO settings, and currently held state remain unchanged.</p>
       <div class="skin-grid">
-        <article class="skin-card" data-skin="wood"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>The default skin, with walnut, brass, and warm cream-colored keys.</p></div></article>
-        <article class="skin-card" data-skin="metal"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>A studio-hardware look using brushed metal, silver edging, and dark control surfaces.</p></div></article>
-        <article class="skin-card" data-skin="cyber"><div class="skin-preview">CYBERDECK</div><div class="skin-copy"><h3>Cyberdeck</h3><p>A neon digital look using cyan, magenta, lime accents, and a glowing grid.</p></div></article>
+        <article class="skin-card" data-skin="wood"><img class="skin-shot" data-sim-skin="wood" src="../assets/screens/skin-wood.png" alt="AMP screen using the Retro Wood skin"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>The default skin, with walnut, brass, and warm cream-colored keys.</p></div></article>
+        <article class="skin-card" data-skin="metal"><img class="skin-shot" data-sim-skin="metal" src="../assets/screens/skin-metal.png" alt="AMP screen using the Metal skin"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>A studio-hardware look using brushed metal, silver edging, and dark control surfaces.</p></div></article>
+        <article class="skin-card" data-skin="neon"><img class="skin-shot" data-sim-skin="neon" src="../assets/screens/skin-neon.png" alt="AMP screen using the Neon skin"><div class="skin-preview">NEON</div><div class="skin-copy"><h3>Neon</h3><p>A neon digital look using cyan, magenta, lime accents, and a glowing grid.</p></div></article>
       </div>
       <div class="steps">
         <article class="step"><h3>Tap the upper left</h3><p>Tap <b>TAB5 / PERFORMANCE SYNTHESIZER</b> at the upper left, or tap the <b>01 SOURCE</b> title area.</p></article>
-        <article class="step"><h3>Cycle the skins</h3><p>Each tap advances <b>WOOD → METAL → CYBERDECK → WOOD</b>.</p></article>
-        <article class="step"><h3>Check the status</h3><p>The top status line shows <b>WOOD THEME</b>, <b>METAL THEME</b>, or <b>CYBERDECK THEME</b>.</p></article>
+        <article class="step"><h3>Cycle the skins</h3><p>Each tap advances <b>WOOD → METAL → NEON → WOOD</b>.</p></article>
+        <article class="step"><h3>Check the status</h3><p>The top status line shows <b>WOOD THEME</b>, <b>METAL THEME</b>, or <b>NEON THEME</b>.</p></article>
       </div>
       <p class="note"><b>Startup skin:</b> the current implementation starts in Retro Wood. Skin choice is not stored in M1–M5.</p>
     </section>
@@ -150,6 +150,6 @@
   </main>
   <iframe id="capture-simulator" src="../simulator.html" title="LVGL simulator for screen capture" aria-hidden="true"></iframe>
   <footer class="footer"><div style="width:min(var(--max),calc(100% - 32px));margin:auto">Tab5 Synth · <a href="https://github.com/airpocket-soundman/Tab5_synth">Source on GitHub</a> · Manual content follows the current repository implementation.</div></footer>
-  <script src="../assets/manual.js?v=20260723-2"></script>
+  <script src="../assets/manual.js?v=20260723-3"></script>
 </body>
 </html>

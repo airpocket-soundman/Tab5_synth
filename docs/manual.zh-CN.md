@@ -17,9 +17,13 @@ Tab5 Synth 是运行于 M5Stack Tab5 的 8 复音触摸合成器，包含四种�
 |---|---|
 | `Retro Wood` | 默认复古风格，使用胡桃木、黄铜和暖色琴键 |
 | `Metal` | 使用拉丝金属、银色边框和深色控制面的录音室设备风格 |
-| `Cyberdeck` | 使用青色、品红色、黄绿色发光元素和数字网格的霓虹风格 |
+| `Neon` | 使用青色、品红色、黄绿色发光元素和数字网格的霓虹风格 |
 
-点击左上角的 `TAB5 / PERFORMANCE SYNTHESIZER` 区域，或点击 `01 SOURCE` 标题区域。每次点击按 `WOOD → METAL → CYBERDECK → WOOD` 的顺序切换，顶部状态栏会显示当前主题名称。
+![Retro Wood 皮肤](assets/screens/skin-wood.png)
+![Metal 皮肤](assets/screens/skin-metal.png)
+![Neon 皮肤](assets/screens/skin-neon.png)
+
+点击左上角的 `TAB5 / PERFORMANCE SYNTHESIZER` 区域，或点击 `01 SOURCE` 标题区域。每次点击按 `WOOD → METAL → NEON → WOOD` 的顺序切换，顶部状态栏会显示当前主题名称。
 
 皮肤只改变显示效果，不会改变音色参数、FX、LFO 设置或演奏状态。当前实现每次启动时使用 Retro Wood，皮肤选择不会保存在 `M1`–`M5` 中。
 

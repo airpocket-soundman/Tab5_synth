@@ -11,7 +11,7 @@ extern "C" {
 typedef enum {
     LVGL_SYNTH_THEME_RETRO_WOOD = 0,
     LVGL_SYNTH_THEME_METAL = 1,
-    LVGL_SYNTH_THEME_CYBERDECK = 2,
+    LVGL_SYNTH_THEME_NEON = 2,
 } lvgl_synth_theme_t;
 
 enum {

@@ -86,6 +86,13 @@
 - 同時押し対応
 - 連続タッチ時は既存ノートの再利用・割当最適化を実施
 
+### 5.7 スキン
+- `Retro Wood` / `Metal` / `Neon` の3種類
+- 画面左上の `TAB5 / PERFORMANCE SYNTHESIZER`、または `01 SOURCE` の見出し部分をタップして切り替える
+- 切替順は `WOOD → METAL → NEON → WOOD`
+- 上部ステータスに `WOOD THEME` / `METAL THEME` / `NEON THEME` を表示
+- 起動時は `Retro Wood`。スキン選択はメモリスロットへ保存しない
+
 ## 6. パラメータ一覧
 | 区分 | パラメータ | 意味 |
 |---|---|---|
