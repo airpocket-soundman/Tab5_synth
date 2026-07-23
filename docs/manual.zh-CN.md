@@ -26,6 +26,8 @@ Tab5 Synth 是运行于 M5Stack Tab5 的 8 复音触摸合成器，包含四种�
 
 ## AMP 与包络
 
+![AMP 页面](assets/screens/amp.png)
+
 ```text
 电平
  ^         峰值
@@ -49,6 +51,8 @@ Tab5 Synth 是运行于 M5Stack Tab5 的 8 复音触摸合成器，包含四种�
 
 ## FX
 
+![FX 页面](assets/screens/fx.png)
+
 处理顺序为 `SOURCE → DELAY → CHORUS → DRIVE → CRUSH → OUTPUT`。效果器名称按钮同时用于选择和开关；旁路时仍可编辑参数。
 
 | FX | 参数 | 含义 |
@@ -68,6 +72,8 @@ Tab5 Synth 是运行于 M5Stack Tab5 的 8 复音触摸合成器，包含四种�
 
 ## LFO
 
+![LFO 页面](assets/screens/lfo.png)
+
 LFO 可自动移动任意 AMP 或 FX 参数。17 个目标分别保存自己的 `RAT`、`DEP`、波形和开关状态。
 
 1. 先在 AMP 或 FX 中选择目标参数。
@@ -78,6 +84,8 @@ LFO 可自动移动任意 AMP 或 FX 参数。17 个目标分别保存自己的 
 琥珀色控件编辑普通基础值，青色控件编辑 LFO 设置。在 LFO 页面，共用推子改变所选 LFO 字段，而不是目标基础值。
 
 ## BANK
+
+![BANK 页面](assets/screens/bank.png)
 
 | 按钮 | 内容 |
 |---|---|

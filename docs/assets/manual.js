@@ -2,6 +2,9 @@
   const frame = document.getElementById("capture-simulator");
   const shots = [...document.querySelectorAll("[data-sim-page]")];
   if (!frame || shots.length === 0) return;
+  shots.forEach(image => {
+    if (image.getAttribute("src")) image.parentElement.querySelector(".sim-fallback")?.remove();
+  });
 
   const pageX = { amp: 86, fx: 203, lfo: 320, bank: 437 };
   const pageY = 155;

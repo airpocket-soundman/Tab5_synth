@@ -26,6 +26,8 @@ Tab5 Synth は、M5Stack Tab5 上で動作する最大 8 ボイスのタッチ�
 
 ## AMP とエンベロープ
 
+![AMP 画面](assets/screens/amp.png)
+
 ```text
 音量
  ^         peak
@@ -49,6 +51,8 @@ Tab5 Synth は、M5Stack Tab5 上で動作する最大 8 ボイスのタッチ�
 
 ## FX
 
+![FX 画面](assets/screens/fx.png)
+
 処理順は `SOURCE → DELAY → CHORUS → DRIVE → CRUSH → OUTPUT` です。エフェクト名ボタンは選択と ON/OFF を兼ね、OFF 中も値を編集できます。
 
 | FX | パラメータ | 意味 |
@@ -68,6 +72,8 @@ Tab5 Synth は、M5Stack Tab5 上で動作する最大 8 ボイスのタッチ�
 
 ## LFO
 
+![LFO 画面](assets/screens/lfo.png)
+
 LFO は AMP/FX の各パラメータを自動的に揺らします。17 個の対象それぞれが `RAT`、`DEP`、波形、ON/OFF を独立して保持します。
 
 1. AMP または FX で対象パラメータを選ぶ。
@@ -78,6 +84,8 @@ LFO は AMP/FX の各パラメータを自動的に揺らします。17 個の�
 アンバー系は通常値、シアン系は LFO 設定です。LFO 画面で共通フェーダーを動かすと、対象の元値ではなく選択中の LFO 値が変わります。
 
 ## BANK
+
+![BANK 画面](assets/screens/bank.png)
 
 | ボタン | 内容 |
 |---|---|

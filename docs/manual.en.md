@@ -26,6 +26,8 @@ Hold `MIC` for at least one second; shorter recordings are discarded. The maximu
 
 ## AMP and envelope
 
+![AMP screen](assets/screens/amp.png)
+
 ```text
 level
  ^         peak
@@ -49,6 +51,8 @@ For a short percussive sound, use fast ATK/DEC and low SUS. For a pad, increase 
 
 ## FX
 
+![FX screen](assets/screens/fx.png)
+
 Signal order is `SOURCE → DELAY → CHORUS → DRIVE → CRUSH → OUTPUT`. An effect-name button selects and toggles that effect; parameters remain editable while bypassed.
 
 | FX | Parameter | Meaning |
@@ -68,6 +72,8 @@ Signal order is `SOURCE → DELAY → CHORUS → DRIVE → CRUSH → OUTPUT`. An
 
 ## LFO
 
+![LFO screen](assets/screens/lfo.png)
+
 The LFO automatically moves any AMP or FX parameter. All 17 targets independently retain `RAT`, `DEP`, waveform, and on/off state.
 
 1. Select the target parameter on AMP or FX.
@@ -78,6 +84,8 @@ The LFO automatically moves any AMP or FX parameter. All 17 targets independentl
 Amber controls edit normal base values; cyan controls edit LFO settings. On the LFO page, the shared fader changes the selected LFO field, not the target’s base value.
 
 ## BANK
+
+![BANK screen](assets/screens/bank.png)
 
 | Buttons | Contents |
 |---|---|
