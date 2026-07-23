@@ -175,11 +175,13 @@ h3 { margin: 0 0 8px; }
     #07110f;
   background-size: 10% 25%;
 }
-.env-line { position: absolute; height: 4px; transform-origin: left center; border-radius: 4px; }
-.env-a { left: 4%; bottom: 12%; width: 23%; background: var(--red); transform: rotate(-48deg); }
-.env-d { left: 24%; top: 16%; width: 23%; background: var(--amber); transform: rotate(29deg); }
-.env-s { left: 45%; top: 43%; width: 28%; background: var(--lime); }
-.env-r { left: 72%; top: 43%; width: 27%; background: var(--cyan); transform: rotate(35deg); }
+.env-canvas {
+  position: absolute;
+  top: 18px;
+  left: 3%;
+  width: 94%;
+  height: 170px;
+}
 .env-label { position: absolute; bottom: 10px; font-weight: 800; }
 .env-label small { display: block; color: var(--muted); font-weight: 400; }
 .env-label.a { left: 8%; color: var(--red); }
