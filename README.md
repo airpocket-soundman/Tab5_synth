@@ -8,6 +8,15 @@ in [docs/licensing.md](docs/licensing.md).
 
 See [spec.md](spec.md) for the current implementation specification.
 
+## User manual
+
+- [Illustrated web manual / 図解 Web マニュアル / 图解网页手册](https://airpocket-soundman.github.io/Tab5_synth/)
+- Markdown: [日本語](docs/manual.ja.md) · [English](docs/manual.en.md) · [中文](docs/manual.zh-CN.md)
+
+The web manual includes live captures from the bundled LVGL simulator and an
+interactive simulator. Use the language switcher for Japanese, English, or
+Simplified Chinese.
+
 ## LVGL Web Simulator
 
 UI development uses [Web Simulator for LVGL](https://github.com/airpocket-soundman/web-simulator-for-lvgl).

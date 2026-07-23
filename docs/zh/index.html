@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="M5Stack Tab5 Synth 中文用户手册：音源、AMP、FX、LFO、音色库、包络、XY 触控板和键盘。">
+  <title>Tab5 Synth 用户手册</title>
+  <link rel="stylesheet" href="../assets/manual.css">
+</head>
+<body>
+  <header class="site-header"><nav class="nav" aria-label="主导航">
+    <a class="brand" href="#top">TAB5 <span>SYNTH</span></a>
+    <div class="nav-links"><a href="#sources">音源</a><a href="#amp">AMP</a><a href="#fx">FX</a><a href="#lfo">LFO</a><a href="#bank">BANK</a><a href="#performance">演奏</a></div>
+    <div class="languages" aria-label="语言"><a href="../">日本語</a><a href="../en/">English</a><a href="./" aria-current="page">中文</a></div>
+  </nav></header>
+
+  <main id="top">
+    <div class="hero">
+      <p class="eyebrow">M5Stack Tab5 · Performance Synthesizer</p>
+      <h1>触摸、塑造、演奏。</h1>
+      <p class="lede">Tab5 Synth 把振荡器、麦克风采样、外部 I2S 输入、ADSR 包络、四组效果器、逐参数 LFO、预设、XY 触控板和触摸键盘整合为一台 8 复音合成器。</p>
+      <div class="hero-actions"><a class="button" href="#quickstart">制作第一个声音</a><a class="button secondary" href="#simulator">打开模拟器</a></div>
+    </div>
+    <div class="facts"><div class="fact"><strong>8 voices</strong><span>最多同时演奏 8 个音符</span></div><div class="fact"><strong>6 sources</strong><span>SINE / SAW / SQUARE / TRIANGLE / MIC / I2S</span></div><div class="fact"><strong>17 targets</strong><span>每个 AMP 与 FX 参数都有独立 LFO</span></div></div>
+
+    <section id="quickstart">
+      <h2>快速入门</h2><p class="section-intro">基本流程是：选择目标 → 用底部横向推子调值 → 用键盘或 XY 触控板演奏。</p>
+      <div class="steps"><article class="step"><h3>选择音源</h3><p>先点 <b>SINE</b> 或 <b>SAW</b>。锯齿波明亮、泛音丰富，很适合主音和铺底音色。</p></article><article class="step"><h3>设置音量</h3><p>打开 <b>AMP</b>，选择 <b>VOL</b>，提高横向数值推子。</p></article><article class="step"><h3>塑造音符</h3><p>调节 <b>ATK / DEC / SUS / REL</b>，中央包络图会同步变化。</p></article><article class="step"><h3>开始演奏</h3><p>触摸键盘；在 XY 板上，X 控制音高，Y 提供演奏位置。</p></article></div>
+    </section>
+
+    <section id="sources">
+      <h2>01 · 音源</h2><p class="section-intro">顶部一行决定原始声音。“sing” 通常是对 <b>SINE</b>（正弦波）的误写。除了四种振荡器波形，还可使用麦克风采样和 I2S 数字输入。</p>
+      <div class="source-grid"><article class="card"><h3>SINE</h3><p>纯净圆润，适合次低音、长笛和柔和主音。</p></article><article class="card"><h3>SAW</h3><p>明亮、泛音丰富，适合弦乐、铜管、贝司和强劲主音。</p></article><article class="card"><h3>SQUARE</h3><p>空心而电子化，适合 8-bit、贝司和簧片类音色。</p></article><article class="card"><h3>TRIANGLE</h3><p>比正弦波多一点泛音，适合钟声和柔和贝司。</p></article><article class="card"><h3>MIC</h3><p>按住时录音，松开时生成采样；不足 1 秒会丢弃，最长 5 秒。</p></article><article class="card"><h3>I2S</h3><p>接收外部数字音频；当前输入采样率为 16 kHz。</p></article></div>
+      <p class="note"><b>MIC 操作：</b>按住 MIC 至少 1 秒并输入声音，然后松开。显示 <b>MIC READY</b> / <b>SAMPLED / READY</b> 后即可演奏。网页模拟器用于体验界面；实际录音和发声需要 Tab5 硬件。</p>
+    </section>
+
+    <section id="amp">
+      <h2>AMP · 音量与包络</h2><p class="section-intro">AMP 决定整体音量，以及从按键到松键期间音量如何变化。先选择旋钮，再用编辑器底部共用的 0–100 推子修改。</p>
+      <figure class="sim-figure"><div class="sim-toolbar"><strong>LVGL capture · AMP</strong><span class="capture-status" data-ready="已从实时模拟器捕获" data-failed="请使用下方实时模拟器查看">正在捕获…</span></div><div class="sim-fallback">正在启动 LVGL 模拟器并捕获 AMP。</div><img class="sim-shot" data-sim-page="amp" alt="Tab5 Synth AMP 页面" hidden><figcaption class="callouts"><span class="callout"><b>1</b>AMP / FX / LFO / BANK 页面</span><span class="callout"><b>2</b>VOL 与 ADSR 旋钮</span><span class="callout"><b>3</b>包络显示</span><span class="callout"><b>4</b>共用数值推子</span></figcaption></figure>
+      <div class="parameter-grid"><article class="card"><h3>音量</h3><dl class="parameter-list"><div class="parameter"><dt>VOL</dt><dd>最终输出音量。失真或多音演奏使电平叠加时可适当降低。</dd></div></dl></article><article class="card"><h3>ADSR</h3><dl class="parameter-list"><div class="parameter"><dt>ATK</dt><dd>Attack：按键后到达峰值的时间。小值更锐利，大值缓慢淡入。</dd></div><div class="parameter"><dt>DEC</dt><dd>Decay：从峰值下降到保持电平的时间。</dd></div><div class="parameter"><dt>SUS</dt><dd>Sustain：按住键时维持的电平。它是音量，不是时间。</dd></div><div class="parameter"><dt>REL</dt><dd>Release：松键后到完全静音的时间。</dd></div></dl></article></div>
+      <div class="envelope" role="img" aria-label="ADSR 包络图"><i class="env-line env-a"></i><i class="env-line env-d"></i><i class="env-line env-s"></i><i class="env-line env-r"></i><span class="env-label a">A<small>按下 → 峰值</small></span><span class="env-label d">D<small>峰值 → 保持</small></span><span class="env-label s">S<small>按住期间</small></span><span class="env-label r">R<small>松开 → 静音</small></span></div>
+      <p class="note"><b>示例：</b>打击感 PLK 可用快速 ATK、短 DEC、低 SUS；PAD 则提高 ATK 与 REL，得到缓慢出现和长尾音。</p>
+    </section>
+
+    <section id="fx">
+      <h2>FX · 效果器</h2><p class="section-intro">效果器名称按钮同时用于选择和开关。即使旁路，参数仍可编辑；中间三个旋钮始终属于当前选中的效果器。</p>
+      <figure class="sim-figure"><div class="sim-toolbar"><strong>LVGL capture · FX</strong><span class="capture-status" data-ready="已从实时模拟器捕获" data-failed="请使用下方实时模拟器查看">正在捕获…</span></div><div class="sim-fallback">正在捕获 FX 页面。</div><img class="sim-shot" data-sim-page="fx" alt="Tab5 Synth FX 页面" hidden><figcaption class="callouts"><span class="callout"><b>1</b>红灯表示启用</span><span class="callout"><b>2</b>当前效果器</span><span class="callout"><b>3</b>三个参数</span><span class="callout"><b>4</b>信号从左向右处理</span></figcaption></figure>
+      <div class="signal-chain"><span>DRY SOURCE</span><i>›</i><span>DELAY</span><i>›</i><span>CHORUS</span><i>›</i><span>DRIVE</span><i>›</i><span>CRUSH</span><i>›</i><span>OUTPUT</span></div>
+      <div class="parameter-grid">
+        <article class="card"><h3>DELAY · 回声</h3><dl class="parameter-list"><div class="parameter"><dt>TIME</dt><dd>原声与回声之间的间隔。</dd></div><div class="parameter"><dt>FBK</dt><dd>反馈量；越高，重复次数越多。</dd></div><div class="parameter"><dt>MIX</dt><dd>延迟声与原声的混合比例。</dd></div></dl></article>
+        <article class="card"><h3>CHORUS · 宽度</h3><dl class="parameter-list"><div class="parameter"><dt>RATE</dt><dd>合唱摆动速度。</dd></div><div class="parameter"><dt>DEP</dt><dd>音高/时间调制深度。</dd></div><div class="parameter"><dt>MIX</dt><dd>合唱声混合量。</dd></div></dl></article>
+        <article class="card"><h3>DRIVE · 失真</h3><dl class="parameter-list"><div class="parameter"><dt>DRV</dt><dd>失真强度和增益。</dd></div><div class="parameter"><dt>TON</dt><dd>失真后的明暗平衡。</dd></div><div class="parameter"><dt>MIX</dt><dd>失真声混合量；较低时保留更多原声起音。</dd></div></dl></article>
+        <article class="card"><h3>CRUSH · Lo-fi</h3><dl class="parameter-list"><div class="parameter"><dt>BITS</dt><dd>量化粗糙度；提高后位深破碎感更强。</dd></div><div class="parameter"><dt>RATE</dt><dd>降低采样更新率，产生数字混叠和高频破碎。</dd></div><div class="parameter"><dt>MIX</dt><dd>破碎处理声混合量。</dd></div></dl></article>
+      </div>
+    </section>
+
+    <section id="lfo">
+      <h2>LFO · 自动调制</h2><p class="section-intro">LFO 用低频波形自动移动所选参数。17 个 AMP 与 FX 目标分别保存自己的 Rate、Depth、Wave 和开关状态。</p>
+      <figure class="sim-figure"><div class="sim-toolbar"><strong>LVGL capture · LFO</strong><span class="capture-status" data-ready="已从实时模拟器捕获" data-failed="请使用下方实时模拟器查看">正在捕获…</span></div><div class="sim-fallback">正在捕获 LFO 页面。</div><img class="sim-shot" data-sim-page="lfo" alt="Tab5 Synth LFO 页面" hidden><figcaption class="callouts"><span class="callout"><b>1</b>TARGET 跟随上次所选参数</span><span class="callout"><b>2</b>每个目标独立开关</span><span class="callout"><b>3</b>RAT 与 DEP</span><span class="callout"><b>4</b>四种波形</span></figcaption></figure>
+      <div class="steps"><article class="step"><h3>选择目标</h3><p>先在 AMP 或 FX 中选择要调制的参数，例如 VOL 或 DELAY TIME。</p></article><article class="step"><h3>打开 LFO</h3><p>切到 LFO，确认顶部 <b>TARGET</b> 是所需参数。</p></article><article class="step"><h3>设置运动</h3><p><b>RAT</b> 是速度，<b>DEP</b> 是幅度；选择 SINE、TRIANGLE、SQUARE 或 RND。</p></article><article class="step"><h3>启用</h3><p>点击 <b>LFO ON</b>。切换目标时会调用该目标自己的设置。</p></article></div>
+      <table><thead><tr><th>波形</th><th>运动</th><th>常见用途</th></tr></thead><tbody><tr><td>SINE</td><td>圆滑循环</td><td>颤音、柔和音量变化</td></tr><tr><td>TRIANGLE</td><td>匀速上升下降</td><td>平稳机械扫描</td></tr><tr><td>SQUARE</td><td>在两个值间瞬时切换</td><td>震音、节奏门限感</td></tr><tr><td>RND</td><td>随机变化</td><td>不稳定运动、实验纹理</td></tr></tbody></table>
+      <p class="note"><b>颜色提示：</b>琥珀色控件编辑普通 BASE 值，青色控件编辑 LFO 设置。在 LFO 页面移动共用推子时，改变的是所选 LFO 字段，而非目标的基础值。</p>
+    </section>
+
+    <section id="bank">
+      <h2>BANK · 预设与存储</h2><p class="section-intro">11 个预设提供音色起点；M1–M5 是工作存储槽，切换时保留完整编辑状态。</p>
+      <figure class="sim-figure"><div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status" data-ready="已从实时模拟器捕获" data-failed="请使用下方实时模拟器查看">正在捕获…</span></div><div class="sim-fallback">正在捕获 BANK 页面。</div><img class="sim-shot" data-sim-page="bank" alt="Tab5 Synth BANK 页面" hidden><figcaption class="callouts"><span class="callout"><b>1</b>GTR–SYN 固定预设</span><span class="callout"><b>2</b>RND 随机音色</span><span class="callout"><b>3</b>M1–M5 工作存储</span><span class="callout"><b>4</b>切换前自动保存当前槽</span></figcaption></figure>
+      <table><thead><tr><th>按钮</th><th>含义</th><th>音色方向</th></tr></thead><tbody><tr><td>GTR / PNO / ORG / REC</td><td>吉他 / 钢琴 / 风琴 / 竖笛</td><td>弦乐、键盘、风琴、长笛类起点</td></tr><tr><td>PAD / PLK / BEL</td><td>铺底 / 拨弦 / 钟声</td><td>持续、短促拨弦和钟声</td></tr><tr><td>BRS / BAS / SYN</td><td>铜管 / 贝司 / 合成器</td><td>铜管、低频和强劲电子音色</td></tr><tr><td>RND</td><td>随机</td><td>随机组合音源、数值和效果器</td></tr><tr><td>M1–M5</td><td>存储槽</td><td>先保存离开的槽，再载入目标槽</td></tr></tbody></table>
+    </section>
+
+    <section id="performance">
+      <h2>演奏 · XY 触控板与键盘</h2><p class="section-intro">XY 触控板和两八度触摸键盘都能触发音符，并支持滑动演奏。</p>
+      <div class="parameter-grid"><article class="card"><h3>PERFORMANCE XY</h3><p><b>X 轴</b>覆盖 MIDI 48–96。<b>SEMITONE</b> 量化为半音；<b>CONTINUOUS</b> 允许连续音高。<b>Y 轴</b>作为演奏位置传给音频端，用于表现控制。</p></article><article class="card"><h3>TOUCH KEYBOARD</h3><p>直接演奏白键和黑键。滑动时释放前一个音并触发下一个音；最多 8 复音，可演奏和弦。</p></article></div>
+      <div class="piano" role="img" aria-label="两八度钢琴键盘图"><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="black-key" style="left:8%"></i><i class="black-key" style="left:14.5%"></i><i class="black-key" style="left:27.5%"></i><i class="black-key" style="left:34%"></i><i class="black-key" style="left:40.5%"></i><i class="black-key" style="left:53.5%"></i><i class="black-key" style="left:60%"></i><i class="black-key" style="left:73%"></i><i class="black-key" style="left:79.5%"></i><i class="black-key" style="left:86%"></i></div>
+      <div class="keyboard-notes"><div><b>白键</b><br>自然音 C D E F G A B</div><div><b>黑键</b><br>升/降半音</div><div><b>范围</b><br>约从 C3 开始的两八度</div></div>
+    </section>
+
+    <section id="simulator"><h2>实时 LVGL 模拟器</h2><p class="section-intro">这不是界面模型，而是由仓库中的可移植 LVGL UI 源码构建的模拟器。虽然无声，但可以操作音源按钮、页面、旋钮、推子和键盘。</p><iframe class="live-sim" src="../simulator.html" title="Tab5 Synth LVGL 模拟器"></iframe><p class="note">拖动旋钮，点击或拖动底部数值推子。MIC、I2S 和实际音频行为请在 Tab5 硬件上验证。</p></section>
+  </main>
+  <iframe id="capture-simulator" src="../simulator.html" title="用于截图的 LVGL 模拟器" aria-hidden="true"></iframe>
+  <footer class="footer"><div style="width:min(var(--max),calc(100% - 32px));margin:auto">Tab5 Synth · <a href="https://github.com/airpocket-soundman/Tab5_synth">GitHub 源码</a> · 手册内容依据当前仓库实现。</div></footer>
+  <script src="../assets/manual.js"></script>
+</body>
+</html>

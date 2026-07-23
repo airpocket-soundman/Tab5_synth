@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="English user manual for the M5Stack Tab5 Synth: sources, AMP, FX, LFO, banks, envelope, XY pad, and keyboard.">
+  <title>Tab5 Synth User Manual</title>
+  <link rel="stylesheet" href="../assets/manual.css">
+</head>
+<body>
+  <header class="site-header"><nav class="nav" aria-label="Main navigation">
+    <a class="brand" href="#top">TAB5 <span>SYNTH</span></a>
+    <div class="nav-links"><a href="#sources">Sources</a><a href="#amp">AMP</a><a href="#fx">FX</a><a href="#lfo">LFO</a><a href="#bank">BANK</a><a href="#performance">Play</a></div>
+    <div class="languages" aria-label="Languages"><a href="../">日本語</a><a href="./" aria-current="page">English</a><a href="../zh/">中文</a></div>
+  </nav></header>
+
+  <main id="top">
+    <div class="hero">
+      <p class="eyebrow">M5Stack Tab5 · Performance Synthesizer</p>
+      <h1>Touch it. Shape it. Play it.</h1>
+      <p class="lede">Tab5 Synth combines oscillators, microphone sampling, external I2S input, an ADSR envelope, four effects, per-parameter LFOs, presets, an XY pad, and a touch keyboard in one 8-voice instrument.</p>
+      <div class="hero-actions"><a class="button" href="#quickstart">Make your first sound</a><a class="button secondary" href="#simulator">Open the simulator</a></div>
+    </div>
+    <div class="facts"><div class="fact"><strong>8 voices</strong><span>Up to eight simultaneous notes</span></div><div class="fact"><strong>6 sources</strong><span>SINE / SAW / SQUARE / TRIANGLE / MIC / I2S</span></div><div class="fact"><strong>17 targets</strong><span>An independent LFO for every AMP and FX parameter</span></div></div>
+
+    <section id="quickstart">
+      <h2>Quick start</h2>
+      <p class="section-intro">The core workflow is simple: select a target, change it with the bottom fader, then play with the keyboard or XY pad.</p>
+      <div class="steps">
+        <article class="step"><h3>Choose a source</h3><p>Tap <b>SINE</b> or <b>SAW</b>. Saw is bright and harmonically rich, making it a strong starting point for leads and pads.</p></article>
+        <article class="step"><h3>Set the level</h3><p>Open <b>AMP</b>, select <b>VOL</b>, and raise the horizontal value fader.</p></article>
+        <article class="step"><h3>Shape the note</h3><p>Adjust <b>ATK / DEC / SUS / REL</b>. The envelope display follows your settings.</p></article>
+        <article class="step"><h3>Play</h3><p>Touch the keyboard. On the XY pad, X controls pitch and Y provides performance position.</p></article>
+      </div>
+    </section>
+
+    <section id="sources">
+      <h2>01 · Sources</h2>
+      <p class="section-intro">The top row chooses what produces the raw sound. The “sing” source mentioned informally is labeled <b>SINE</b> in the UI. Four oscillator waves are joined by microphone sampling and digital I2S input.</p>
+      <div class="source-grid">
+        <article class="card"><h3>SINE</h3><p>Pure and rounded. Good for sub bass, flute-like tones, and soft leads.</p></article>
+        <article class="card"><h3>SAW</h3><p>Bright and rich in harmonics. Good for strings, brass, bass, and bold leads.</p></article>
+        <article class="card"><h3>SQUARE</h3><p>Hollow and electronic. Useful for 8-bit tones, basses, and reed-like sounds.</p></article>
+        <article class="card"><h3>TRIANGLE</h3><p>Gentle, with slightly more harmonics than sine. Useful for bells and soft bass.</p></article>
+        <article class="card"><h3>MIC</h3><p>Records while held and commits on release. Holds under one second are discarded; maximum length is five seconds.</p></article>
+        <article class="card"><h3>I2S</h3><p>Receives an external digital audio source. The current input rate is 16 kHz.</p></article>
+      </div>
+      <p class="note"><b>MIC workflow:</b> hold MIC for at least one second while making a sound, then release. <b>MIC READY</b> / <b>SAMPLED / READY</b> means the sample can be played. The web simulator demonstrates the UI; actual recording and audio output require Tab5 hardware.</p>
+    </section>
+
+    <section id="amp">
+      <h2>AMP · Level and envelope</h2>
+      <p class="section-intro">AMP controls overall level and how the volume changes from key-down to key-up. Select a knob, then use the shared 0–100 fader at the bottom of the editor.</p>
+      <figure class="sim-figure">
+        <div class="sim-toolbar"><strong>LVGL capture · AMP</strong><span class="capture-status" data-ready="Captured from the live simulator" data-failed="Use the live simulator below">Capturing…</span></div>
+        <div class="sim-fallback">Starting the LVGL simulator and capturing AMP.</div><img class="sim-shot" data-sim-page="amp" alt="Tab5 Synth AMP screen" hidden>
+        <figcaption class="callouts"><span class="callout"><b>1</b>AMP / FX / LFO / BANK pages</span><span class="callout"><b>2</b>VOL and ADSR knobs</span><span class="callout"><b>3</b>Envelope display</span><span class="callout"><b>4</b>Shared value fader</span></figcaption>
+      </figure>
+      <div class="parameter-grid">
+        <article class="card"><h3>Level</h3><dl class="parameter-list"><div class="parameter"><dt>VOL</dt><dd>Final output level. Lower it when distortion or polyphonic playing causes the output to build up.</dd></div></dl></article>
+        <article class="card"><h3>ADSR</h3><dl class="parameter-list">
+          <div class="parameter"><dt>ATK</dt><dd>Attack: time from key-down to peak level. Low is sharp; high fades in.</dd></div>
+          <div class="parameter"><dt>DEC</dt><dd>Decay: time from the peak down to the sustain level.</dd></div>
+          <div class="parameter"><dt>SUS</dt><dd>Sustain: level held while the key remains down. It is a level, not a time.</dd></div>
+          <div class="parameter"><dt>REL</dt><dd>Release: time from key-up until silence.</dd></div>
+        </dl></article>
+      </div>
+      <div class="envelope" role="img" aria-label="ADSR envelope diagram"><i class="env-line env-a"></i><i class="env-line env-d"></i><i class="env-line env-s"></i><i class="env-line env-r"></i><span class="env-label a">A<small>press → peak</small></span><span class="env-label d">D<small>peak → hold</small></span><span class="env-label s">S<small>while held</small></span><span class="env-label r">R<small>release → quiet</small></span></div>
+      <p class="note"><b>Examples:</b> for a percussive PLK sound, use a fast ATK, short DEC, and low SUS. For a PAD, increase ATK and REL for a slow entrance and long tail.</p>
+    </section>
+
+    <section id="fx">
+      <h2>FX · Effects</h2>
+      <p class="section-intro">An effect name button both selects the effect and toggles it on or off. Parameters remain editable while bypassed. The three central knobs always belong to the selected effect.</p>
+      <figure class="sim-figure">
+        <div class="sim-toolbar"><strong>LVGL capture · FX</strong><span class="capture-status" data-ready="Captured from the live simulator" data-failed="Use the live simulator below">Capturing…</span></div>
+        <div class="sim-fallback">Capturing the FX page.</div><img class="sim-shot" data-sim-page="fx" alt="Tab5 Synth FX screen" hidden>
+        <figcaption class="callouts"><span class="callout"><b>1</b>Red lamp means enabled</span><span class="callout"><b>2</b>Selected effect</span><span class="callout"><b>3</b>Three effect parameters</span><span class="callout"><b>4</b>Signal flows left to right</span></figcaption>
+      </figure>
+      <div class="signal-chain"><span>DRY SOURCE</span><i>›</i><span>DELAY</span><i>›</i><span>CHORUS</span><i>›</i><span>DRIVE</span><i>›</i><span>CRUSH</span><i>›</i><span>OUTPUT</span></div>
+      <div class="parameter-grid">
+        <article class="card"><h3>DELAY · Echo</h3><dl class="parameter-list"><div class="parameter"><dt>TIME</dt><dd>Gap between the dry note and its echo.</dd></div><div class="parameter"><dt>FBK</dt><dd>Feedback amount. Higher values create more repeats.</dd></div><div class="parameter"><dt>MIX</dt><dd>Amount of delayed sound mixed with dry sound.</dd></div></dl></article>
+        <article class="card"><h3>CHORUS · Width</h3><dl class="parameter-list"><div class="parameter"><dt>RATE</dt><dd>Speed of the chorus movement.</dd></div><div class="parameter"><dt>DEP</dt><dd>Depth of pitch/time modulation.</dd></div><div class="parameter"><dt>MIX</dt><dd>Amount of chorus mixed in.</dd></div></dl></article>
+        <article class="card"><h3>DRIVE · Distortion</h3><dl class="parameter-list"><div class="parameter"><dt>DRV</dt><dd>Drive strength and gain.</dd></div><div class="parameter"><dt>TON</dt><dd>Brightness balance after distortion.</dd></div><div class="parameter"><dt>MIX</dt><dd>Distorted-signal blend; lower values retain more dry attack.</dd></div></dl></article>
+        <article class="card"><h3>CRUSH · Lo-fi</h3><dl class="parameter-list"><div class="parameter"><dt>BITS</dt><dd>Quantization roughness; higher settings create stronger bit-crushing.</dd></div><div class="parameter"><dt>RATE</dt><dd>Sample-update reduction for digital aliasing and high-frequency breakup.</dd></div><div class="parameter"><dt>MIX</dt><dd>Amount of crushed signal mixed in.</dd></div></dl></article>
+      </div>
+    </section>
+
+    <section id="lfo">
+      <h2>LFO · Automatic modulation</h2>
+      <p class="section-intro">An LFO moves a selected control automatically with a slow waveform. All 17 AMP and FX targets keep their own Rate, Depth, Wave, and on/off state.</p>
+      <figure class="sim-figure">
+        <div class="sim-toolbar"><strong>LVGL capture · LFO</strong><span class="capture-status" data-ready="Captured from the live simulator" data-failed="Use the live simulator below">Capturing…</span></div>
+        <div class="sim-fallback">Capturing the LFO page.</div><img class="sim-shot" data-sim-page="lfo" alt="Tab5 Synth LFO screen" hidden>
+        <figcaption class="callouts"><span class="callout"><b>1</b>TARGET follows your last parameter</span><span class="callout"><b>2</b>Per-target LFO on/off</span><span class="callout"><b>3</b>RAT and DEP</span><span class="callout"><b>4</b>Four waveforms</span></figcaption>
+      </figure>
+      <div class="steps">
+        <article class="step"><h3>Select a target</h3><p>On AMP or FX, select the parameter you want to move—for example VOL or DELAY TIME.</p></article>
+        <article class="step"><h3>Open LFO</h3><p>Switch to LFO and confirm that the <b>TARGET</b> label names the intended control.</p></article>
+        <article class="step"><h3>Shape the motion</h3><p><b>RAT</b> sets speed and <b>DEP</b> sets range. Choose SINE, TRIANGLE, SQUARE, or RND.</p></article>
+        <article class="step"><h3>Enable it</h3><p>Tap <b>LFO ON</b>. Choosing another target recalls that target’s independent settings.</p></article>
+      </div>
+      <table><thead><tr><th>Wave</th><th>Motion</th><th>Typical use</th></tr></thead><tbody>
+        <tr><td>SINE</td><td>Rounded, smooth cycle</td><td>Vibrato and gentle volume movement</td></tr><tr><td>TRIANGLE</td><td>Linear rise and fall</td><td>Steady mechanical sweeps</td></tr><tr><td>SQUARE</td><td>Instant switch between two values</td><td>Tremolo and rhythmic gating</td></tr><tr><td>RND</td><td>Random changes</td><td>Unstable motion and experimental texture</td></tr>
+      </tbody></table>
+      <p class="note"><b>Color language:</b> amber controls edit the normal BASE value; cyan controls edit LFO settings. On the LFO page, the shared fader changes the selected LFO field, not the target’s base value.</p>
+    </section>
+
+    <section id="bank">
+      <h2>BANK · Presets and memories</h2>
+      <p class="section-intro">Eleven presets provide starting sounds. M1–M5 are working-memory slots that retain your complete editing state as you move between them.</p>
+      <figure class="sim-figure">
+        <div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status" data-ready="Captured from the live simulator" data-failed="Use the live simulator below">Capturing…</span></div>
+        <div class="sim-fallback">Capturing the BANK page.</div><img class="sim-shot" data-sim-page="bank" alt="Tab5 Synth BANK screen" hidden>
+        <figcaption class="callouts"><span class="callout"><b>1</b>GTR–SYN fixed presets</span><span class="callout"><b>2</b>RND random patch</span><span class="callout"><b>3</b>M1–M5 work memories</span><span class="callout"><b>4</b>Current slot saves before switching</span></figcaption>
+      </figure>
+      <table><thead><tr><th>Buttons</th><th>Meaning</th><th>Character</th></tr></thead><tbody>
+        <tr><td>GTR / PNO / ORG / REC</td><td>Guitar / Piano / Organ / Recorder</td><td>Strings, keys, organ, and flute-like starts</td></tr><tr><td>PAD / PLK / BEL</td><td>Pad / Pluck / Bell</td><td>Sustained, short plucked, and bell sounds</td></tr><tr><td>BRS / BAS / SYN</td><td>Brass / Bass / Synth</td><td>Brass, low-end, and assertive synth sounds</td></tr><tr><td>RND</td><td>Random</td><td>An experimental combination of source, values, and effects</td></tr><tr><td>M1–M5</td><td>Memory slots</td><td>The slot you leave is saved before the destination is loaded</td></tr>
+      </tbody></table>
+    </section>
+
+    <section id="performance">
+      <h2>Performance · XY pad and keyboard</h2>
+      <p class="section-intro">Both the XY pad and the two-octave touch keyboard can trigger notes. Sliding gestures are supported.</p>
+      <div class="parameter-grid"><article class="card"><h3>PERFORMANCE XY</h3><p>The <b>X axis</b> covers MIDI 48–96. <b>SEMITONE</b> quantizes to chromatic notes; <b>CONTINUOUS</b> allows smooth pitch. The <b>Y axis</b> is forwarded as performance position for expressive use.</p></article><article class="card"><h3>TOUCH KEYBOARD</h3><p>Play white and black keys directly. Sliding releases the previous note and triggers the next. Up to eight voices allow chords.</p></article></div>
+      <div class="piano" role="img" aria-label="Two-octave piano keyboard diagram">
+        <i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i>
+        <i class="black-key" style="left:8%"></i><i class="black-key" style="left:14.5%"></i><i class="black-key" style="left:27.5%"></i><i class="black-key" style="left:34%"></i><i class="black-key" style="left:40.5%"></i><i class="black-key" style="left:53.5%"></i><i class="black-key" style="left:60%"></i><i class="black-key" style="left:73%"></i><i class="black-key" style="left:79.5%"></i><i class="black-key" style="left:86%"></i>
+      </div>
+      <div class="keyboard-notes"><div><b>White keys</b><br>Natural notes C D E F G A B</div><div><b>Black keys</b><br>Sharp / flat semitones</div><div><b>Range</b><br>About two octaves from C3</div></div>
+    </section>
+
+    <section id="simulator"><h2>Live LVGL simulator</h2><p class="section-intro">This is not a mock-up. It is the simulator built from the repository’s portable LVGL UI source. It is silent, but every source button, page, knob, fader, and key can be tried.</p><iframe class="live-sim" src="../simulator.html" title="Tab5 Synth LVGL simulator"></iframe><p class="note">Drag knobs, and tap or drag the bottom value fader. Verify MIC, I2S, and actual audio behavior on Tab5 hardware.</p></section>
+  </main>
+  <iframe id="capture-simulator" src="../simulator.html" title="LVGL simulator for screen capture" aria-hidden="true"></iframe>
+  <footer class="footer"><div style="width:min(var(--max),calc(100% - 32px));margin:auto">Tab5 Synth · <a href="https://github.com/airpocket-soundman/Tab5_synth">Source on GitHub</a> · Manual content follows the current repository implementation.</div></footer>
+  <script src="../assets/manual.js"></script>
+</body>
+</html>

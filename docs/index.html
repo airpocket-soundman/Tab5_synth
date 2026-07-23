@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="M5Stack Tab5 Synth の日本語ユーザーマニュアル。音源、AMP、FX、LFO、BANK、XY パッド、鍵盤を図解します。">
+  <title>Tab5 Synth ユーザーマニュアル</title>
+  <link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav" aria-label="メインナビゲーション">
+      <a class="brand" href="#top">TAB5 <span>SYNTH</span></a>
+      <div class="nav-links">
+        <a href="#sources">音源</a><a href="#amp">AMP</a><a href="#fx">FX</a>
+        <a href="#lfo">LFO</a><a href="#bank">BANK</a><a href="#performance">演奏</a>
+      </div>
+      <div class="languages" aria-label="言語">
+        <a href="./" aria-current="page">日本語</a><a href="en/">English</a><a href="zh/">中文</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <div class="hero">
+      <p class="eyebrow">M5Stack Tab5 · Performance Synthesizer</p>
+      <h1>触れて、音を作り、演奏する。</h1>
+      <p class="lede">Tab5 Synth は、オシレータ、マイク録音、外部 I2S 入力、ADSR、4 系統のエフェクト、パラメータ単位の LFO、プリセット、タッチ鍵盤を一画面にまとめた 8 ボイス・シンセサイザです。</p>
+      <div class="hero-actions">
+        <a class="button" href="#quickstart">最初の音を出す</a>
+        <a class="button secondary" href="#simulator">シミュレータを操作する</a>
+      </div>
+    </div>
+
+    <div class="facts" aria-label="主な仕様">
+      <div class="fact"><strong>8 voices</strong><span>最大 8 音のポリフォニー</span></div>
+      <div class="fact"><strong>6 sources</strong><span>SINE / SAW / SQUARE / TRIANGLE / MIC / I2S</span></div>
+      <div class="fact"><strong>17 targets</strong><span>AMP と FX の各パラメータへ個別 LFO</span></div>
+    </div>
+
+    <section id="quickstart">
+      <h2>クイックスタート</h2>
+      <p class="section-intro">操作の基本は「対象を選ぶ → 下の横フェーダーで値を変える → 鍵盤または XY パッドで鳴らす」です。</p>
+      <div class="steps">
+        <article class="step"><h3>音源を選ぶ</h3><p>まず <b>SINE</b> や <b>SAW</b> を押します。SAW は明るく倍音が多いので、フィルタのない現在の UI でも存在感のある音になります。</p></article>
+        <article class="step"><h3>音量を確認</h3><p><b>AMP</b> の <b>VOL</b> を選び、画面下の横フェーダーを上げます。</p></article>
+        <article class="step"><h3>音の輪郭を作る</h3><p><b>ATK / DEC / SUS / REL</b> を調整します。中央のエンベロープ図が値に追従します。</p></article>
+        <article class="step"><h3>演奏する</h3><p>下の鍵盤をタッチします。XY パッドでは X が音程、Y が演奏位置として使われます。</p></article>
+      </div>
+    </section>
+
+    <section id="sources">
+      <h2>01 · 音源</h2>
+      <p class="section-intro">最上段で発音の元を選びます。ユーザーのいう “sing” は画面上では <b>SINE</b>（サイン波）です。<b>SAW</b>（ノコギリ波）を含む 4 波形に加え、録音とデジタル入力が使えます。</p>
+      <div class="source-grid">
+        <article class="card"><h3>SINE</h3><p>純粋で丸い音。サブベース、笛、柔らかいリードの出発点。</p></article>
+        <article class="card"><h3>SAW</h3><p>倍音が多く明るい音。ストリングス、ブラス、太いリード向け。</p></article>
+        <article class="card"><h3>SQUARE</h3><p>中空で電子的な音。8-bit 系、ベース、クラリネット風に有効。</p></article>
+        <article class="card"><h3>TRIANGLE</h3><p>SINE より少し倍音がある穏やかな音。ベルやソフトなベース向け。</p></article>
+        <article class="card"><h3>MIC</h3><p>押している間に録音し、離すとサンプル化。1 秒未満は破棄、最大 5 秒。</p></article>
+        <article class="card"><h3>I2S</h3><p>外部デジタル音声を音源として受信。現在の受信レートは 16 kHz。</p></article>
+      </div>
+      <p class="note"><b>MIC のコツ：</b> MIC を 1 秒以上押し続け、録りたい音を入力してから離します。表示が <b>MIC READY</b> / <b>SAMPLED / READY</b> になれば演奏できます。Web シミュレータは UI 操作用で、実際の録音・音声出力は Tab5 実機で行います。</p>
+    </section>
+
+    <section id="amp">
+      <h2>AMP · 音量とエンベロープ</h2>
+      <p class="section-intro">AMP は「どのくらい大きく」「鍵盤を押してから離すまで、音量がどう変化するか」を決めます。ノブを選択してから、共通フェーダーで 0–100 の値を設定します。</p>
+      <figure class="sim-figure">
+        <div class="sim-toolbar"><strong>LVGL capture · AMP</strong><span class="capture-status" data-ready="実シミュレータから取得" data-failed="下のライブシミュレータで確認できます">キャプチャ中…</span></div>
+        <div class="sim-fallback">LVGL シミュレータを起動して AMP 画面を取得しています。</div>
+        <img class="sim-shot" data-sim-page="amp" alt="Tab5 Synth の AMP 画面" hidden>
+        <figcaption class="callouts">
+          <span class="callout"><b>1</b>AMP / FX / LFO / BANK タブ</span>
+          <span class="callout"><b>2</b>VOL と ADSR ノブ</span>
+          <span class="callout"><b>3</b>エンベロープ表示</span>
+          <span class="callout"><b>4</b>全画面共通の値フェーダー</span>
+        </figcaption>
+      </figure>
+
+      <div class="parameter-grid">
+        <article class="card"><h3>音量</h3><dl class="parameter-list"><div class="parameter"><dt>VOL</dt><dd>最終的な出力音量。歪みや複数音で音量が上がるときは控えめにします。</dd></div></dl></article>
+        <article class="card"><h3>ADSR</h3><dl class="parameter-list">
+          <div class="parameter"><dt>ATK</dt><dd>Attack。押鍵から最大音量までの時間。小さいほど鋭く、大きいほどゆっくり立ち上がります。</dd></div>
+          <div class="parameter"><dt>DEC</dt><dd>Decay。最大音量からサステインレベルへ下がる時間。</dd></div>
+          <div class="parameter"><dt>SUS</dt><dd>Sustain。鍵盤を押し続けている間の保持レベル。時間ではなく音量です。</dd></div>
+          <div class="parameter"><dt>REL</dt><dd>Release。鍵盤を離してから無音になるまでの時間。</dd></div>
+        </dl></article>
+      </div>
+
+      <div class="envelope" role="img" aria-label="ADSR エンベロープ図">
+        <i class="env-line env-a"></i><i class="env-line env-d"></i><i class="env-line env-s"></i><i class="env-line env-r"></i>
+        <span class="env-label a">A<small>押す → 立上り</small></span>
+        <span class="env-label d">D<small>ピーク → 保持</small></span>
+        <span class="env-label s">S<small>押している間</small></span>
+        <span class="env-label r">R<small>離す → 無音</small></span>
+      </div>
+      <p class="note"><b>作例：</b> パーカッシブな PLK は ATK を小さく、DEC を短く、SUS を低くします。PAD は ATK と REL を大きくすると、ゆっくり現れて余韻が残ります。</p>
+    </section>
+
+    <section id="fx">
+      <h2>FX · エフェクト</h2>
+      <p class="section-intro">エフェクト名のボタンは、選択と ON/OFF を兼ねます。OFF にしてもパラメータは編集可能です。選んだエフェクトの 3 パラメータが中央に表示されます。</p>
+      <figure class="sim-figure">
+        <div class="sim-toolbar"><strong>LVGL capture · FX</strong><span class="capture-status" data-ready="実シミュレータから取得" data-failed="下のライブシミュレータで確認できます">キャプチャ中…</span></div>
+        <div class="sim-fallback">FX 画面を取得しています。</div>
+        <img class="sim-shot" data-sim-page="fx" alt="Tab5 Synth の FX 画面" hidden>
+        <figcaption class="callouts">
+          <span class="callout"><b>1</b>赤いランプで ON/OFF</span>
+          <span class="callout"><b>2</b>選択中の FX</span>
+          <span class="callout"><b>3</b>3 つのパラメータ</span>
+          <span class="callout"><b>4</b>処理順は左から右</span>
+        </figcaption>
+      </figure>
+
+      <div class="signal-chain" aria-label="エフェクト処理順"><span>DRY SOURCE</span><i>›</i><span>DELAY</span><i>›</i><span>CHORUS</span><i>›</i><span>DRIVE</span><i>›</i><span>CRUSH</span><i>›</i><span>OUTPUT</span></div>
+      <div class="parameter-grid">
+        <article class="card"><h3>DELAY · 反響</h3><dl class="parameter-list">
+          <div class="parameter"><dt>TIME</dt><dd>原音から反響までの間隔。</dd></div><div class="parameter"><dt>FBK</dt><dd>Feedback。反響を戻す量。大きいほど繰り返しが長くなります。</dd></div><div class="parameter"><dt>MIX</dt><dd>原音に混ぜるディレイ音の量。</dd></div>
+        </dl></article>
+        <article class="card"><h3>CHORUS · 厚み</h3><dl class="parameter-list">
+          <div class="parameter"><dt>RATE</dt><dd>揺れの速さ。</dd></div><div class="parameter"><dt>DEP</dt><dd>Depth。音程・時間の揺れ幅。</dd></div><div class="parameter"><dt>MIX</dt><dd>コーラス音の混合量。</dd></div>
+        </dl></article>
+        <article class="card"><h3>DRIVE · 歪み</h3><dl class="parameter-list">
+          <div class="parameter"><dt>DRV</dt><dd>Drive。歪ませる強さとゲイン。</dd></div><div class="parameter"><dt>TON</dt><dd>Tone。歪み後の明るさ・暗さのバランス。</dd></div><div class="parameter"><dt>MIX</dt><dd>歪み音の混合量。原音を残す並列歪みにも使えます。</dd></div>
+        </dl></article>
+        <article class="card"><h3>CRUSH · ローファイ</h3><dl class="parameter-list">
+          <div class="parameter"><dt>BITS</dt><dd>量子化の粗さ。値を上げるほど強いビットクラッシュ感。</dd></div><div class="parameter"><dt>RATE</dt><dd>サンプル更新の粗さ。高域が崩れ、デジタルな質感になります。</dd></div><div class="parameter"><dt>MIX</dt><dd>クラッシュ音の混合量。</dd></div>
+        </dl></article>
+      </div>
+    </section>
+
+    <section id="lfo">
+      <h2>LFO · 自動モジュレーション</h2>
+      <p class="section-intro">LFO は低周波の波でノブを自動的に揺らします。AMP と FX の 17 パラメータそれぞれに、独立した Rate / Depth / Wave / ON/OFF が保存されます。</p>
+      <figure class="sim-figure">
+        <div class="sim-toolbar"><strong>LVGL capture · LFO</strong><span class="capture-status" data-ready="実シミュレータから取得" data-failed="下のライブシミュレータで確認できます">キャプチャ中…</span></div>
+        <div class="sim-fallback">LFO 画面を取得しています。</div>
+        <img class="sim-shot" data-sim-page="lfo" alt="Tab5 Synth の LFO 画面" hidden>
+        <figcaption class="callouts">
+          <span class="callout"><b>1</b>TARGET は直前のパラメータ</span>
+          <span class="callout"><b>2</b>LFO ON / OFF は対象別</span>
+          <span class="callout"><b>3</b>RAT と DEP</span>
+          <span class="callout"><b>4</b>4 種類の波形</span>
+        </figcaption>
+      </figure>
+      <div class="steps">
+        <article class="step"><h3>対象を選ぶ</h3><p>AMP または FX で揺らしたいパラメータを選びます。例：音量なら VOL、ディレイ時間なら DELAY TIME。</p></article>
+        <article class="step"><h3>LFO を開く</h3><p>LFO タブへ移動します。上部の <b>TARGET</b> が意図したパラメータか確認します。</p></article>
+        <article class="step"><h3>動きを決める</h3><p><b>RAT</b> は速度、<b>DEP</b> は振れ幅。SINE / TRIANGLE / SQUARE / RND から波形を選びます。</p></article>
+        <article class="step"><h3>有効にする</h3><p><b>LFO ON</b> を押します。別の対象へ移ると、その対象専用の設定に切り替わります。</p></article>
+      </div>
+      <table>
+        <thead><tr><th>波形</th><th>動き</th><th>使い方</th></tr></thead>
+        <tbody>
+          <tr><td>SINE</td><td>丸く滑らかな往復</td><td>ビブラート、ゆっくりした音量変化</td></tr>
+          <tr><td>TRIANGLE</td><td>一定速度で上下</td><td>機械的だが滑らかなスイープ</td></tr>
+          <tr><td>SQUARE</td><td>2 値を瞬時に切替</td><td>トレモロ、リズミックなゲート感</td></tr>
+          <tr><td>RND</td><td>ランダムに変化</td><td>不規則な揺らぎ、実験的テクスチャ</td></tr>
+        </tbody>
+      </table>
+      <p class="note"><b>色の読み方：</b> アンバー系は通常値（BASE）、シアン系は LFO 設定を示します。LFO 画面で共通フェーダーを動かすと、対象の元値ではなく選択中の LFO 値が変わります。</p>
+    </section>
+
+    <section id="bank">
+      <h2>BANK · プリセットとメモリ</h2>
+      <p class="section-intro">11 個の音色プリセットと 5 個の編集メモリがあります。プリセットは音作りの出発点、M1–M5 は現在の作業状態を切り替えながら保持するスロットです。</p>
+      <figure class="sim-figure">
+        <div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status" data-ready="実シミュレータから取得" data-failed="下のライブシミュレータで確認できます">キャプチャ中…</span></div>
+        <div class="sim-fallback">BANK 画面を取得しています。</div>
+        <img class="sim-shot" data-sim-page="bank" alt="Tab5 Synth の BANK 画面" hidden>
+        <figcaption class="callouts">
+          <span class="callout"><b>1</b>GTR–SYN は固定音色</span>
+          <span class="callout"><b>2</b>RND はランダム音色</span>
+          <span class="callout"><b>3</b>M1–M5 は編集メモリ</span>
+          <span class="callout"><b>4</b>切替前のスロットを自動保存</span>
+        </figcaption>
+      </figure>
+      <table>
+        <thead><tr><th>ボタン</th><th>意味</th><th>音色の目安</th></tr></thead>
+        <tbody>
+          <tr><td>GTR / PNO / ORG / REC</td><td>Guitar / Piano / Organ / Recorder</td><td>弦、鍵盤、オルガン、笛系</td></tr>
+          <tr><td>PAD / PLK / BEL</td><td>Pad / Pluck / Bell</td><td>持続音、短い撥弦、ベル</td></tr>
+          <tr><td>BRS / BAS / SYN</td><td>Brass / Bass / Synth</td><td>ブラス、低音、強いシンセ音</td></tr>
+          <tr><td>RND</td><td>Random</td><td>ソース、値、エフェクトを組み合わせた実験音色</td></tr>
+          <tr><td>M1–M5</td><td>Memory slots</td><td>スロット移動時に、離れる側の現在値を保存してから移動</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="performance">
+      <h2>演奏 · XY パッドと鍵盤</h2>
+      <p class="section-intro">画面右の XY パッドと、下部の 2 オクターブ鍵盤はどちらも発音に使えます。タッチを滑らせる演奏にも対応しています。</p>
+      <div class="parameter-grid">
+        <article class="card"><h3>PERFORMANCE XY</h3><p><b>X 軸</b>は MIDI 48–96 の音程です。<b>SEMITONE</b> は半音に量子化し、<b>CONTINUOUS</b> は連続音程になります。<b>Y 軸</b>は位置情報としてオーディオ側へ渡され、表現操作に利用されます。</p></article>
+        <article class="card"><h3>TOUCH KEYBOARD</h3><p>白鍵と黒鍵を直接押します。スワイプすると、前のノートを離して次のノートへ移ります。最大 8 ボイスのため、和音も演奏できます。</p></article>
+      </div>
+      <div class="piano" role="img" aria-label="2 オクターブのピアノ鍵盤図">
+        <i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i>
+        <i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i>
+        <i class="black-key" style="left:8%"></i><i class="black-key" style="left:14.5%"></i><i class="black-key" style="left:27.5%"></i><i class="black-key" style="left:34%"></i><i class="black-key" style="left:40.5%"></i>
+        <i class="black-key" style="left:53.5%"></i><i class="black-key" style="left:60%"></i><i class="black-key" style="left:73%"></i><i class="black-key" style="left:79.5%"></i><i class="black-key" style="left:86%"></i>
+      </div>
+      <div class="keyboard-notes">
+        <div><b>白鍵</b><br>自然音 C D E F G A B</div>
+        <div><b>黒鍵</b><br>シャープ / フラットの半音</div>
+        <div><b>範囲</b><br>表示鍵盤は C3 付近から 2 オクターブ</div>
+      </div>
+    </section>
+
+    <section id="simulator">
+      <h2>ライブ LVGL シミュレータ</h2>
+      <p class="section-intro">下の画面は画像ではなく、リポジトリの UI ソースからビルドしたシミュレータです。音声は出ませんが、音源、各タブ、ノブ、フェーダー、鍵盤の操作を試せます。</p>
+      <iframe class="live-sim" src="simulator.html" title="Tab5 Synth LVGL simulator"></iframe>
+      <p class="note">ノブはドラッグ、下の横フェーダーはタップまたはドラッグできます。MIC / I2S と実音声処理は Tab5 実機で確認してください。</p>
+    </section>
+  </main>
+
+  <iframe id="capture-simulator" src="simulator.html" title="画面キャプチャ用 LVGL simulator" aria-hidden="true"></iframe>
+  <footer class="footer"><div style="width:min(var(--max),calc(100% - 32px));margin:auto">Tab5 Synth · <a href="https://github.com/airpocket-soundman/Tab5_synth">Source on GitHub</a> · UI とマニュアルはリポジトリの実装に基づきます。</div></footer>
+  <script src="assets/manual.js"></script>
+</body>
+</html>
