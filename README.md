@@ -10,13 +10,16 @@ See [spec.md](spec.md) for the current implementation specification.
 
 ## User manual
 
-- [Illustrated web manual / 図解 Web マニュアル / 图解网页手册](https://airpocket-soundman.github.io/Tab5_synth/)
+- Illustrated web manual:
+  [日本語](https://airpocket-soundman.github.io/Tab5_synth/) ·
+  [English](https://airpocket-soundman.github.io/Tab5_synth/en/) ·
+  [中文](https://airpocket-soundman.github.io/Tab5_synth/zh/)
+- [Interactive LVGL simulator / LVGLシミュレータ / LVGL 模拟器](https://airpocket-soundman.github.io/Tab5_synth/simulator.html)
 - Markdown: [日本語](docs/manual.ja.md) · [English](docs/manual.en.md) · [中文](docs/manual.zh-CN.md)
 
-The web manual includes live captures from the bundled LVGL simulator and an
-interactive simulator. Use the language switcher for Japanese, English, or
-Simplified Chinese. It also documents the three switchable UI skins—Retro Wood,
-Metal, and Neon—and how to cycle them from the upper-left title area.
+The web manual and interactive simulator are separate pages. The manual includes
+static LVGL captures, Japanese, English, and Simplified Chinese editions, and
+documentation for the three switchable UI skins—Retro Wood, Metal, and Neon.
 
 ## LVGL Web Simulator
 
