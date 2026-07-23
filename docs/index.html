@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="M5Stack Tab5 Synth の日本語ユーザーマニュアル。音源、AMP、FX、LFO、BANK、XY パッド、鍵盤を図解します。">
   <title>Tab5 Synth ユーザーマニュアル</title>
-  <link rel="stylesheet" href="assets/manual.css?v=20260723-2">
+  <link rel="stylesheet" href="assets/manual.css?v=20260723-3">
 </head>
 <body>
   <header class="site-header">
     <nav class="nav" aria-label="メインナビゲーション">
       <a class="brand" href="#top">TAB5 <span>SYNTH</span></a>
       <div class="nav-links">
-        <a href="#sources">音源</a><a href="#amp">AMP</a><a href="#fx">FX</a>
+        <a href="#skins">スキン</a><a href="#sources">音源</a><a href="#amp">AMP</a><a href="#fx">FX</a>
         <a href="#lfo">LFO</a><a href="#bank">BANK</a><a href="#performance">演奏</a>
       </div>
       <div class="languages" aria-label="言語">
@@ -47,6 +47,22 @@
         <article class="step"><h3>音の輪郭を作る</h3><p><b>ATK / DEC / SUS / REL</b> を調整します。中央のエンベロープ図が値に追従します。</p></article>
         <article class="step"><h3>演奏する</h3><p>下の鍵盤をタッチします。XY パッドでは X が音程、Y が演奏位置として使われます。</p></article>
       </div>
+    </section>
+
+    <section id="skins">
+      <h2>3種類のスキン</h2>
+      <p class="section-intro">操作画面は 3 種類の外観に切り替えられます。スキンは表示だけを変更し、音色パラメータ、エフェクト、LFO、演奏状態には影響しません。</p>
+      <div class="skin-grid">
+        <article class="skin-card" data-skin="wood"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>標準スキン。ウォルナット、真鍮、クリーム色の鍵盤を使った温かいビンテージ調です。</p></div></article>
+        <article class="skin-card" data-skin="metal"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>ヘアライン金属、シルバーの縁、暗い操作面を組み合わせたスタジオ機器風です。</p></div></article>
+        <article class="skin-card" data-skin="cyber"><div class="skin-preview">CYBERDECK</div><div class="skin-copy"><h3>Cyberdeck</h3><p>シアン、マゼンタ、ライムの発光色とデジタルグリッドを使ったネオン調です。</p></div></article>
+      </div>
+      <div class="steps">
+        <article class="step"><h3>左上をタップ</h3><p>画面左上の <b>TAB5 / PERFORMANCE SYNTHESIZER</b> 部分、または <b>01 SOURCE</b> の見出し部分をタップします。</p></article>
+        <article class="step"><h3>順番に切り替え</h3><p>タップするたびに <b>WOOD → METAL → CYBERDECK → WOOD</b> の順で切り替わります。</p></article>
+        <article class="step"><h3>表示を確認</h3><p>上部ステータスに <b>WOOD THEME</b>、<b>METAL THEME</b>、または <b>CYBERDECK THEME</b> と表示されます。</p></article>
+      </div>
+      <p class="note"><b>起動時のスキン：</b>現在の実装では起動時に Retro Wood が選ばれます。スキン選択は M1–M5 には保存されません。</p>
     </section>
 
     <section id="sources">

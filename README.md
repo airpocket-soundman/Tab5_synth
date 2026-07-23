@@ -15,7 +15,8 @@ See [spec.md](spec.md) for the current implementation specification.
 
 The web manual includes live captures from the bundled LVGL simulator and an
 interactive simulator. Use the language switcher for Japanese, English, or
-Simplified Chinese.
+Simplified Chinese. It also documents the three switchable UI skins—Retro Wood,
+Metal, and Cyberdeck—and how to cycle them from the upper-left title area.
 
 ## LVGL Web Simulator
 

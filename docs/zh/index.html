@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="M5Stack Tab5 Synth 中文用户手册：音源、AMP、FX、LFO、音色库、包络、XY 触控板和键盘。">
   <title>Tab5 Synth 用户手册</title>
-  <link rel="stylesheet" href="../assets/manual.css?v=20260723-2">
+  <link rel="stylesheet" href="../assets/manual.css?v=20260723-3">
 </head>
 <body>
   <header class="site-header"><nav class="nav" aria-label="主导航">
     <a class="brand" href="#top">TAB5 <span>SYNTH</span></a>
-    <div class="nav-links"><a href="#sources">音源</a><a href="#amp">AMP</a><a href="#fx">FX</a><a href="#lfo">LFO</a><a href="#bank">BANK</a><a href="#performance">演奏</a></div>
+    <div class="nav-links"><a href="#skins">皮肤</a><a href="#sources">音源</a><a href="#amp">AMP</a><a href="#fx">FX</a><a href="#lfo">LFO</a><a href="#bank">BANK</a></div>
     <div class="languages" aria-label="语言"><a href="../">日本語</a><a href="../en/">English</a><a href="./" aria-current="page">中文</a></div>
   </nav></header>
 
@@ -26,6 +26,22 @@
     <section id="quickstart">
       <h2>快速入门</h2><p class="section-intro">基本流程是：选择目标 → 用底部横向推子调值 → 用键盘或 XY 触控板演奏。</p>
       <div class="steps"><article class="step"><h3>选择音源</h3><p>先点 <b>SINE</b> 或 <b>SAW</b>。锯齿波明亮、泛音丰富，很适合主音和铺底音色。</p></article><article class="step"><h3>设置音量</h3><p>打开 <b>AMP</b>，选择 <b>VOL</b>，提高横向数值推子。</p></article><article class="step"><h3>塑造音符</h3><p>调节 <b>ATK / DEC / SUS / REL</b>，中央包络图会同步变化。</p></article><article class="step"><h3>开始演奏</h3><p>触摸键盘；在 XY 板上，X 控制音高，Y 提供演奏位置。</p></article></div>
+    </section>
+
+    <section id="skins">
+      <h2>三种界面皮肤</h2>
+      <p class="section-intro">操作界面提供三种外观。切换皮肤只改变显示效果，不会改变音色参数、效果器、LFO 设置或当前演奏状态。</p>
+      <div class="skin-grid">
+        <article class="skin-card" data-skin="wood"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>默认皮肤，采用胡桃木、黄铜和暖色琴键，呈现复古乐器风格。</p></div></article>
+        <article class="skin-card" data-skin="metal"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>使用拉丝金属、银色边框和深色控制面板，接近录音室设备风格。</p></div></article>
+        <article class="skin-card" data-skin="cyber"><div class="skin-preview">CYBERDECK</div><div class="skin-copy"><h3>Cyberdeck</h3><p>使用青色、品红色、黄绿色发光元素和数字网格的霓虹风格。</p></div></article>
+      </div>
+      <div class="steps">
+        <article class="step"><h3>点击左上角</h3><p>点击左上角的 <b>TAB5 / PERFORMANCE SYNTHESIZER</b> 区域，或点击 <b>01 SOURCE</b> 标题区域。</p></article>
+        <article class="step"><h3>依次切换</h3><p>每次点击按 <b>WOOD → METAL → CYBERDECK → WOOD</b> 的顺序切换。</p></article>
+        <article class="step"><h3>确认状态</h3><p>顶部状态栏会显示 <b>WOOD THEME</b>、<b>METAL THEME</b> 或 <b>CYBERDECK THEME</b>。</p></article>
+      </div>
+      <p class="note"><b>启动皮肤：</b>当前实现每次启动时使用 Retro Wood。皮肤选择不会保存在 M1–M5 中。</p>
     </section>
 
     <section id="sources">

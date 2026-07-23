@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="English user manual for the M5Stack Tab5 Synth: sources, AMP, FX, LFO, banks, envelope, XY pad, and keyboard.">
   <title>Tab5 Synth User Manual</title>
-  <link rel="stylesheet" href="../assets/manual.css?v=20260723-2">
+  <link rel="stylesheet" href="../assets/manual.css?v=20260723-3">
 </head>
 <body>
   <header class="site-header"><nav class="nav" aria-label="Main navigation">
     <a class="brand" href="#top">TAB5 <span>SYNTH</span></a>
-    <div class="nav-links"><a href="#sources">Sources</a><a href="#amp">AMP</a><a href="#fx">FX</a><a href="#lfo">LFO</a><a href="#bank">BANK</a><a href="#performance">Play</a></div>
+    <div class="nav-links"><a href="#skins">Skins</a><a href="#sources">Sources</a><a href="#amp">AMP</a><a href="#fx">FX</a><a href="#lfo">LFO</a><a href="#bank">BANK</a></div>
     <div class="languages" aria-label="Languages"><a href="../">日本語</a><a href="./" aria-current="page">English</a><a href="../zh/">中文</a></div>
   </nav></header>
 
@@ -32,6 +32,22 @@
         <article class="step"><h3>Shape the note</h3><p>Adjust <b>ATK / DEC / SUS / REL</b>. The envelope display follows your settings.</p></article>
         <article class="step"><h3>Play</h3><p>Touch the keyboard. On the XY pad, X controls pitch and Y provides performance position.</p></article>
       </div>
+    </section>
+
+    <section id="skins">
+      <h2>Three UI skins</h2>
+      <p class="section-intro">The interface has three visual skins. Changing skin affects appearance only; sound parameters, effects, LFO settings, and currently held state remain unchanged.</p>
+      <div class="skin-grid">
+        <article class="skin-card" data-skin="wood"><div class="skin-preview">RETRO WOOD</div><div class="skin-copy"><h3>Retro Wood</h3><p>The default skin, with walnut, brass, and warm cream-colored keys.</p></div></article>
+        <article class="skin-card" data-skin="metal"><div class="skin-preview">METAL</div><div class="skin-copy"><h3>Metal</h3><p>A studio-hardware look using brushed metal, silver edging, and dark control surfaces.</p></div></article>
+        <article class="skin-card" data-skin="cyber"><div class="skin-preview">CYBERDECK</div><div class="skin-copy"><h3>Cyberdeck</h3><p>A neon digital look using cyan, magenta, lime accents, and a glowing grid.</p></div></article>
+      </div>
+      <div class="steps">
+        <article class="step"><h3>Tap the upper left</h3><p>Tap <b>TAB5 / PERFORMANCE SYNTHESIZER</b> at the upper left, or tap the <b>01 SOURCE</b> title area.</p></article>
+        <article class="step"><h3>Cycle the skins</h3><p>Each tap advances <b>WOOD → METAL → CYBERDECK → WOOD</b>.</p></article>
+        <article class="step"><h3>Check the status</h3><p>The top status line shows <b>WOOD THEME</b>, <b>METAL THEME</b>, or <b>CYBERDECK THEME</b>.</p></article>
+      </div>
+      <p class="note"><b>Startup skin:</b> the current implementation starts in Retro Wood. Skin choice is not stored in M1–M5.</p>
     </section>
 
     <section id="sources">

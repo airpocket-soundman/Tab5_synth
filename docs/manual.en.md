@@ -11,6 +11,18 @@ Tab5 Synth is an 8-voice touch synthesizer for M5Stack Tab5. It includes four os
 3. Change its 0–100 value with the shared horizontal fader.
 4. Play the keyboard or XY pad.
 
+## Three UI skins
+
+| Skin | Appearance |
+|---|---|
+| `Retro Wood` | Default vintage look with walnut, brass, and warm cream-colored keys |
+| `Metal` | Studio-hardware look with brushed metal, silver edging, and dark controls |
+| `Cyberdeck` | Neon digital look with cyan, magenta, lime accents, and a glowing grid |
+
+Tap `TAB5 / PERFORMANCE SYNTHESIZER` at the upper left, or tap the `01 SOURCE` title area. Each tap advances `WOOD → METAL → CYBERDECK → WOOD`; the current theme name appears in the top status line.
+
+Skins affect appearance only and do not change sound parameters, FX, LFO settings, or performance state. The current implementation starts in Retro Wood, and skin choice is not stored in `M1`–`M5`.
+
 ## Sources
 
 | Source | Meaning | Typical uses |
