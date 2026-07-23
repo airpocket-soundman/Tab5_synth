@@ -56,6 +56,7 @@ typedef struct {
     bool effect_on[FX_COUNT];
     uint8_t source;
     uint8_t mode;
+    uint8_t timbre;
 } synth_state_t;
 
 typedef struct {
@@ -227,6 +228,7 @@ void lvgl_synth_ui_get_state(lvgl_synth_state_t *snapshot)
     memcpy(snapshot->effect_enabled, state.effect_on, sizeof(state.effect_on));
     snapshot->source = state.source;
     snapshot->mode = state.mode;
+    snapshot->timbre = state.timbre;
     for(i = 0; i < TARGET_COUNT; ++i) {
         snapshot->lfo_rate[i] = state.lfo[i].rate;
         snapshot->lfo_depth[i] = state.lfo[i].depth;
@@ -995,6 +997,8 @@ static void source_event(lv_event_t *event)
 {
     int source = (int)(intptr_t)lv_event_get_user_data(event);
     state.source = (uint8_t)source;
+    state.timbre = 0;
+    active_preset = -1;
     mic_recording = false;
     if(source != SOURCE_MIC) mic_ready = false;
     set_status(source == SOURCE_I2S ? "I2S input selected" : "Oscillator source selected");
@@ -1006,6 +1010,8 @@ static void mic_event(lv_event_t *event)
 {
     lv_event_code_t code = lv_event_get_code(event);
     state.source = SOURCE_MIC;
+    state.timbre = 0;
+    active_preset = -1;
     if(code == LV_EVENT_PRESSED) {
         mic_recording = true;
         mic_ready = false;
@@ -1421,6 +1427,7 @@ static void default_patch(synth_state_t *patch)
     memcpy(patch->value, defaults, sizeof(defaults));
     patch->source = SOURCE_SINE;
     patch->mode = 1;
+    patch->timbre = 0;
     patch->effect_on[FX_DELAY] = false;
     patch->effect_on[FX_CHORUS] = false;
     for(i = 0; i < TARGET_COUNT; ++i) {
@@ -1438,16 +1445,16 @@ static void apply_preset(int preset)
         bool effect_on[FX_COUNT];
     } preset_t;
     static const preset_t presets[10] = {
-        {SOURCE_SAW,      {60,0,11,20,24, 18,30,12, 20,10,0, 66,44,34, 95,95,0}, {true,false,true,false}},
-        {SOURCE_TRIANGLE, {68,0,28,14,18, 12,18,8,  20,10,0, 24,52,0,  98,98,0}, {true,false,false,false}},
-        {SOURCE_SQUARE,   {56,0,3,95,26,  28,30,16, 12,26,18,30,30,16, 98,98,0}, {true,true,true,false}},
-        {SOURCE_SINE,     {50,3,16,70,12, 12,20,0,  10,8,14, 12,54,0,  98,98,0}, {false,true,false,false}},
-        {SOURCE_TRIANGLE, {54,36,24,80,58,52,50,36, 12,46,38,22,56,10, 70,70,0}, {true,true,false,false}},
-        {SOURCE_SQUARE,   {60,0,8,10,16,  14,26,12, 16,8,0,  88,64,46, 96,98,0}, {true,false,true,false}},
-        {SOURCE_SINE,     {62,0,34,0,28,  30,34,26, 20,24,20,28,74,20,54,62,24}, {true,true,true,true}},
-        {SOURCE_SAW,      {66,2,20,62,20, 16,24,10, 14,20,14,60,56,28,94,94,0}, {true,true,true,false}},
-        {SOURCE_SQUARE,   {66,0,12,70,10, 10,20,0,  8,8,0,  74,40,34,98,98,0}, {false,false,true,false}},
-        {SOURCE_SAW,      {62,1,22,58,30, 24,42,24, 24,38,24,72,62,42,42,36,24}, {true,true,true,true}}
+        {SOURCE_SAW,      {62,0,24,8,16,  16,18,8,  18,10,0, 28,52,0, 98,98,0}, {true,false,false,false}},
+        {SOURCE_TRIANGLE, {66,0,46,6,24,  18,16,7,  16,8,0,  24,50,0, 98,98,0}, {true,false,false,false}},
+        {SOURCE_SQUARE,   {57,1,3,96,12,  16,14,5,  12,18,14,24,50,0, 98,98,0}, {false,true,false,false}},
+        {SOURCE_SINE,     {54,3,10,88,14, 10,12,0,  10,8,0,  20,48,0, 98,98,0}, {false,false,false,false}},
+        {SOURCE_TRIANGLE, {52,36,24,82,64, 30,28,18, 12,30,24,18,48,0, 98,98,0}, {true,true,false,false}},
+        {SOURCE_SQUARE,   {60,0,18,0,12,  14,18,10, 16,8,0,  26,54,0, 98,98,0}, {true,false,false,false}},
+        {SOURCE_SINE,     {60,0,48,0,42,  34,28,22, 16,10,0,  20,50,0, 98,98,0}, {true,false,false,false}},
+        {SOURCE_SAW,      {65,4,14,78,18, 12,12,0,  12,8,0,  22,58,7, 98,98,0}, {false,false,true,false}},
+        {SOURCE_SQUARE,   {68,1,20,58,10,  8,10,0,  8,8,0,  18,44,5, 98,98,0}, {false,false,true,false}},
+        {SOURCE_SAW,      {60,1,22,58,30, 24,42,24, 24,38,24,52,62,24,54,52,16}, {true,true,true,true}}
     };
     static const char *const names[11] = {"GTR", "PNO", "ORG", "REC", "PAD", "PLK", "BEL", "BRS", "BAS", "SYN", "RND"};
     int i;
@@ -1456,9 +1463,11 @@ static void apply_preset(int preset)
     if(preset == 10) {
         for(i = 0; i < TARGET_COUNT; ++i) state.value[i] = (uint8_t)((seed + i * 37) % 101);
         state.source = (uint8_t)(seed % 4);
+        state.timbre = (uint8_t)(seed % 11);
         for(i = 0; i < FX_COUNT; ++i) state.effect_on[i] = ((seed >> i) & 1) != 0;
     } else {
         state.source = presets[preset].source;
+        state.timbre = (uint8_t)(preset + 1);
         memcpy(state.value, presets[preset].value, sizeof(state.value));
         memcpy(state.effect_on, presets[preset].effect_on, sizeof(state.effect_on));
     }

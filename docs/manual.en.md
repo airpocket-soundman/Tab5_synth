@@ -2,7 +2,7 @@
 
 [Illustrated HTML manual](https://airpocket-soundman.github.io/Tab5_synth/en/) · [日本語](manual.ja.md) · [中文](manual.zh-CN.md)
 
-Tab5 Synth is an 8-voice touch synthesizer for M5Stack Tab5. It includes four oscillator waves, microphone sampling, external I2S input, an ADSR envelope, four effects, per-parameter LFOs, presets, an XY pad, and a two-octave keyboard.
+Tab5 Synth is a 7-voice touch synthesizer for M5Stack Tab5. It includes four oscillator waves, microphone sampling, external I2S input, an ADSR envelope, four effects, per-parameter LFOs, presets, an XY pad, and a two-octave keyboard.
 
 ## Basic workflow
 
@@ -103,13 +103,18 @@ Amber controls edit normal base values; cyan controls edit LFO settings. On the 
 
 ![BANK screen](assets/screens/bank.png)
 
+`GTR` through `SYN` load instrument-specific harmonic profiles as well as ADSR and effect settings; they are not merely basic waves with effects.
+
 | Buttons | Contents |
 |---|---|
-| `GTR PNO ORG REC` | Guitar / Piano / Organ / Recorder |
-| `PAD PLK BEL` | Pad / Pluck / Bell |
-| `BRS BAS SYN` | Brass / Bass / Synth |
-| `RND` | Random combination of source, values, and effects |
+| `GTR PNO` | Decaying string harmonics / piano with a stronger third partial |
+| `ORG REC` | Sustained 1:2:3:6 emphasis / fundamental-led tone with weak even harmonics |
+| `PAD PLK BEL` | Soft sustain / bright short pluck / struck tone with sparse high partials |
+| `BRS BAS SYN` | Strong low harmonics / fundamental-heavy bass / band-limited saw series |
+| `RND` | Random combination of timbre profile, values, and effects |
 | `M1`–`M5` | Working memories; the slot being left is saved before the destination loads |
+
+Pressing `SINE`, `SAW`, `SQUARE`, or `TRIANGLE` after loading a preset clears the instrument profile and returns to the normal basic waveform.
 
 ## XY pad and keyboard
 
@@ -117,6 +122,6 @@ Amber controls edit normal base values; cyan controls edit LFO settings. On the 
 - `SEMITONE` quantizes pitch; `CONTINUOUS` allows smooth pitch.
 - Y is forwarded as performance position.
 - The bottom keyboard spans about two octaves; white keys are natural notes and black keys are sharps/flats.
-- Sliding gestures and up to eight-note chords are supported.
+- Sliding gestures and up to seven-note chords are supported.
 
-See the [HTML manual](https://airpocket-soundman.github.io/Tab5_synth/en/#simulator) for simulator captures and the interactive LVGL UI.
+See the [HTML manual](https://airpocket-soundman.github.io/Tab5_synth/en/) for screen captures, and open the [LVGL simulator](https://airpocket-soundman.github.io/Tab5_synth/simulator.html) separately for the interactive UI.

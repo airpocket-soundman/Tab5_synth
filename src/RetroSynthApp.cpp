@@ -200,6 +200,10 @@ void RetroSynthApp::applyAudioState(bool include_lfo) {
 
   if (ui_state_.source <= 3) {
     audio_engine_.setSourceType(AudioSourceType::Oscillator);
+    const auto timbre = ui_state_.timbre <= static_cast<std::uint8_t>(InstrumentTimbre::Synth)
+                            ? static_cast<InstrumentTimbre>(ui_state_.timbre)
+                            : InstrumentTimbre::Basic;
+    audio_engine_.setInstrumentTimbre(timbre);
   } else if (ui_state_.source == 4) {
     if (audio_engine_.hasMicSample()) {
       audio_engine_.setSourceType(AudioSourceType::OnboardMic);

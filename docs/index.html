@@ -25,7 +25,7 @@
     <div class="hero">
       <p class="eyebrow">M5Stack Tab5 · Performance Synthesizer</p>
       <h1>触れて、音を作り、演奏する。</h1>
-      <p class="lede">Tab5 Synth は、オシレータ、マイク録音、外部 I2S 入力、ADSR、4 系統のエフェクト、パラメータ単位の LFO、プリセット、タッチ鍵盤を一画面にまとめた 8 ボイス・シンセサイザです。</p>
+      <p class="lede">Tab5 Synth は、オシレータ、マイク録音、外部 I2S 入力、ADSR、4 系統のエフェクト、パラメータ単位の LFO、プリセット、タッチ鍵盤を一画面にまとめた最大 7 ボイス・シンセサイザです。</p>
       <div class="hero-actions">
         <a class="button" href="#quickstart">最初の音を出す</a>
         <a class="button secondary" href="simulator.html" target="_blank" rel="noopener">シミュレータを別ページで開く</a>
@@ -33,7 +33,7 @@
     </div>
 
     <div class="facts" aria-label="主な仕様">
-      <div class="fact"><strong>8 voices</strong><span>最大 8 音のポリフォニー</span></div>
+      <div class="fact"><strong>7 voices</strong><span>最大 7 音のポリフォニー</span></div>
       <div class="fact"><strong>6 sources</strong><span>SINE / SAW / SQUARE / TRIANGLE / MIC / I2S</span></div>
       <div class="fact"><strong>17 targets</strong><span>AMP と FX の各パラメータへ個別 LFO</span></div>
     </div>
@@ -180,7 +180,7 @@
 
     <section id="bank">
       <h2>BANK · プリセットとメモリ</h2>
-      <p class="section-intro">11 個の音色プリセットと 5 個の編集メモリがあります。プリセットは音作りの出発点、M1–M5 は現在の作業状態を切り替えながら保持するスロットです。</p>
+      <p class="section-intro">11 個の音色プリセットと 5 個の編集メモリがあります。GTR–SYN は、単純な波形だけでなく楽器ごとの専用倍音プロファイルと ADSR を読み込みます。M1–M5 は倍音プロファイルを含む編集状態を保持します。</p>
       <figure class="sim-figure">
         <div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status">LVGLシミュレータの固定キャプチャ</span></div>
 
@@ -195,13 +195,15 @@
       <table>
         <thead><tr><th>ボタン</th><th>意味</th><th>音色の目安</th></tr></thead>
         <tbody>
-          <tr><td>GTR / PNO / ORG / REC</td><td>Guitar / Piano / Organ / Recorder</td><td>弦、鍵盤、オルガン、笛系</td></tr>
-          <tr><td>PAD / PLK / BEL</td><td>Pad / Pluck / Bell</td><td>持続音、短い撥弦、ベル</td></tr>
-          <tr><td>BRS / BAS / SYN</td><td>Brass / Bass / Synth</td><td>ブラス、低音、強いシンセ音</td></tr>
+          <tr><td>GTR / PNO</td><td>Guitar / Piano</td><td>減衰する弦の倍音列／第3部分音を強めたピアノ系スペクトル</td></tr>
+          <tr><td>ORG / REC</td><td>Organ / Recorder</td><td>1:2:3:6 を強めた持続音／基音主体で偶数倍音が弱い笛系</td></tr>
+          <tr><td>PAD / PLK / BEL</td><td>Pad / Pluck / Bell</td><td>柔らかい持続音／明るく短い撥弦／高次部分音を含む打音</td></tr>
+          <tr><td>BRS / BAS / SYN</td><td>Brass / Bass / Synth</td><td>低次倍音の厚いブラス／基音主体の低音／帯域制限した鋸歯状倍音</td></tr>
           <tr><td>RND</td><td>Random</td><td>ソース、値、エフェクトを組み合わせた実験音色</td></tr>
           <tr><td>M1–M5</td><td>Memory slots</td><td>スロット移動時に、離れる側の現在値を保存してから移動</td></tr>
         </tbody>
       </table>
+      <p class="note"><b>ヒント：</b>プリセット選択後に SINE / SAW / SQUARE / TRIANGLE を押すと、専用楽器プロファイルを解除して通常の基本波形へ戻ります。</p>
     </section>
 
     <section id="performance">
@@ -209,7 +211,7 @@
       <p class="section-intro">画面右の XY パッドと、下部の 2 オクターブ鍵盤はどちらも発音に使えます。タッチを滑らせる演奏にも対応しています。</p>
       <div class="parameter-grid">
         <article class="card"><h3>PERFORMANCE XY</h3><p><b>X 軸</b>は MIDI 48–96 の音程です。<b>SEMITONE</b> は半音に量子化し、<b>CONTINUOUS</b> は連続音程になります。<b>Y 軸</b>は位置情報としてオーディオ側へ渡され、表現操作に利用されます。</p></article>
-        <article class="card"><h3>TOUCH KEYBOARD</h3><p>白鍵と黒鍵を直接押します。スワイプすると、前のノートを離して次のノートへ移ります。最大 8 ボイスのため、和音も演奏できます。</p></article>
+        <article class="card"><h3>TOUCH KEYBOARD</h3><p>白鍵と黒鍵を直接押します。スワイプすると、前のノートを離して次のノートへ移ります。最大 7 ボイスのため、和音も演奏できます。</p></article>
       </div>
       <div class="piano" role="img" aria-label="2 オクターブのピアノ鍵盤図">
         <i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i>

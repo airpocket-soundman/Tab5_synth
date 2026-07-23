@@ -10,6 +10,38 @@
 namespace {
 
 constexpr float kTwoPi = 6.28318530718f;
+constexpr std::size_t kMaxInstrumentHarmonics = 16;
+
+struct HarmonicProfile {
+  std::array<float, kMaxInstrumentHarmonics> amplitude;
+  std::size_t count;
+};
+
+constexpr HarmonicProfile kInstrumentProfiles[] = {
+    // Basic is not selected from this table.
+    {{{1.00f}}, 1},
+    // GTR: rounded fundamental with a steadily decaying harmonic series.
+    {{{1.00f, 0.56f, 0.42f, 0.24f, 0.18f, 0.12f, 0.08f, 0.05f}}, 8},
+    // PNO: a pronounced third partial, followed by a softer upper spectrum.
+    {{{0.95f, 0.38f, 0.55f, 0.22f, 0.18f, 0.12f, 0.08f, 0.05f}}, 8},
+    // ORG: drawbar-like 1:2:3:6 emphasis.
+    {{{1.00f, 0.62f, 0.78f, 0.24f, 0.18f, 0.46f, 0.12f, 0.20f}}, 8},
+    // REC: dominant fundamental, weak even harmonics, and gentle odd partials.
+    {{{1.00f, 0.08f, 0.28f, 0.05f, 0.14f, 0.04f, 0.08f, 0.03f}}, 8},
+    // PAD: softly filtered odd-rich spectrum.
+    {{{1.00f, 0.18f, 0.32f, 0.10f, 0.18f, 0.07f, 0.10f, 0.05f}}, 8},
+    // PLK: bright initial spectrum; the amp envelope supplies the fast decay.
+    {{{1.00f, 0.65f, 0.45f, 0.32f, 0.24f, 0.18f, 0.14f, 0.11f, 0.08f, 0.06f}}, 10},
+    // BEL: sparse high partials approximate a struck resonator within one periodic table.
+    {{{1.00f, 0.10f, 0.46f, 0.06f, 0.32f, 0.05f, 0.20f, 0.04f, 0.15f, 0.03f, 0.11f, 0.03f}}, 12},
+    // BRS: strong low harmonics and progressively weaker upper harmonics.
+    {{{1.00f, 0.82f, 0.64f, 0.50f, 0.38f, 0.28f, 0.20f, 0.14f, 0.10f, 0.07f}}, 10},
+    // BAS: fundamental-heavy with enough odd energy for definition on the small speaker.
+    {{{1.00f, 0.35f, 0.46f, 0.16f, 0.24f, 0.10f, 0.15f, 0.07f}}, 8},
+    // SYN: band-limited saw-like series.
+    {{{1.00f, 0.50f, 0.33f, 0.25f, 0.20f, 0.17f, 0.14f, 0.13f,
+       0.11f, 0.10f, 0.09f, 0.08f, 0.077f, 0.071f, 0.067f, 0.063f}}, 16},
+};
 
 }
 
@@ -17,6 +49,7 @@ bool OscillatorSource::begin() {
   last_channel_volume_.fill(255);
   silence_wave_.fill(static_cast<std::uint8_t>(SynthConfig::audio.center_sample));
   buildWaveTables();
+  buildInstrumentWaveTable();
   buildFilteredWaveTables();
   setVolume(volume_);
   constexpr int keepalive_channel = 7;
@@ -30,7 +63,7 @@ bool OscillatorSource::noteOn(std::size_t voice_index, float /*note_value*/, flo
   const bool processed = (filter_enabled_ && filter_mix_normalized_ > 0.0f) ||
                          (distortion_enabled_ && distortion_mix_normalized_ > 0.0f) ||
                          (bitcrusher_enabled_ && bitcrusher_mix_normalized_ > 0.0f);
-  if (waveform == Waveform::Sine && !processed) {
+  if (instrument_timbre_ == InstrumentTimbre::Basic && waveform == Waveform::Sine && !processed) {
     const auto sample_rate = static_cast<std::uint32_t>(
         std::lround(frequency * static_cast<float>(kSineWaveTableSize)));
     M5.Speaker.playRaw(sine_wave_16_.data(), sine_wave_16_.size(), sample_rate,
@@ -68,6 +101,15 @@ void OscillatorSource::setVoiceLevel(std::size_t voice_index, float level, Wavef
     last_channel_volume_[voice_index] = next_volume;
   }
   M5.Speaker.setChannelVolume(channelForVoice(voice_index), next_volume);
+}
+
+void OscillatorSource::setInstrumentTimbre(InstrumentTimbre timbre) {
+  if (instrument_timbre_ == timbre) {
+    return;
+  }
+  instrument_timbre_ = timbre;
+  buildInstrumentWaveTable();
+  filter_tables_dirty_ = true;
 }
 
 void OscillatorSource::setFilterEnabled(bool enabled) {
@@ -170,6 +212,35 @@ void OscillatorSource::buildWaveTables() {
   filter_tables_dirty_ = true;
 }
 
+void OscillatorSource::buildInstrumentWaveTable() {
+  const auto index = std::min<std::size_t>(
+      static_cast<std::size_t>(instrument_timbre_),
+      (sizeof(kInstrumentProfiles) / sizeof(kInstrumentProfiles[0])) - 1);
+  const HarmonicProfile& profile = kInstrumentProfiles[index];
+  std::array<float, kWaveTableSize> samples{};
+  float peak = 0.0f;
+
+  for (std::size_t i = 0; i < kWaveTableSize; ++i) {
+    const float phase = static_cast<float>(i) / static_cast<float>(kWaveTableSize);
+    float sample = 0.0f;
+    for (std::size_t harmonic = 0; harmonic < profile.count; ++harmonic) {
+      // Alternating polarity reduces crest factor while retaining the same spectrum.
+      const float polarity = (harmonic & 1U) == 0U ? 1.0f : -1.0f;
+      sample += polarity * profile.amplitude[harmonic] *
+                std::sinf(kTwoPi * phase * static_cast<float>(harmonic + 1));
+    }
+    samples[i] = sample;
+    peak = std::max(peak, std::fabs(sample));
+  }
+
+  const float scale = peak > 0.0001f ? 108.0f / peak : 0.0f;
+  for (std::size_t i = 0; i < kWaveTableSize; ++i) {
+    const float shifted = SynthConfig::audio.center_sample + samples[i] * scale;
+    instrument_wave_[i] = static_cast<std::uint8_t>(std::lround(std::clamp(shifted, 1.0f, 255.0f)));
+  }
+  instrument_wave_[0] = static_cast<std::uint8_t>(SynthConfig::audio.center_sample);
+}
+
 void OscillatorSource::buildFilteredWaveTables() {
   auto build_filtered = [&](const auto& source, auto& destination) {
     std::array<float, kWaveTableSize> dry{};
@@ -248,6 +319,7 @@ void OscillatorSource::buildFilteredWaveTables() {
   build_filtered(saw_wave_, filtered_saw_wave_);
   build_filtered(square_wave_, filtered_square_wave_);
   build_filtered(triangle_wave_, filtered_triangle_wave_);
+  build_filtered(instrument_wave_, filtered_instrument_wave_);
   filter_tables_dirty_ = false;
 }
 
@@ -266,6 +338,9 @@ const unsigned char* OscillatorSource::waveformTable(Waveform waveform) const {
   const bool use_effects = (filter_enabled_ && filter_mix_normalized_ > 0.0f) ||
                            (distortion_enabled_ && distortion_mix_normalized_ > 0.0f) ||
                            (bitcrusher_enabled_ && bitcrusher_mix_normalized_ > 0.0f);
+  if (instrument_timbre_ != InstrumentTimbre::Basic) {
+    return use_effects ? filtered_instrument_wave_.data() : instrument_wave_.data();
+  }
   switch (waveform) {
     case Waveform::Sine:
       return use_effects ? filtered_sine_wave_.data() : sine_wave_.data();

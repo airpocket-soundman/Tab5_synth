@@ -2,7 +2,7 @@
 
 [图解 HTML 手册](https://airpocket-soundman.github.io/Tab5_synth/zh/) · [日本語](manual.ja.md) · [English](manual.en.md)
 
-Tab5 Synth 是运行于 M5Stack Tab5 的 8 复音触摸合成器，包含四种振荡器波形、麦克风采样、外部 I2S 输入、ADSR 包络、四组效果器、逐参数 LFO、预设、XY 触控板和两八度键盘。
+Tab5 Synth 是运行于 M5Stack Tab5 的最多 7 复音触摸合成器，包含四种振荡器波形、麦克风采样、外部 I2S 输入、ADSR 包络、四组效果器、逐参数 LFO、预设、XY 触控板和两八度键盘。
 
 ## 基本操作
 
@@ -103,13 +103,18 @@ LFO 可自动移动任意 AMP 或 FX 参数。17 个目标分别保存自己的 
 
 ![BANK 页面](assets/screens/bank.png)
 
+`GTR` 至 `SYN` 不只是基础波形加效果，还会载入乐器专用的谐波结构、ADSR 和效果设置。
+
 | 按钮 | 内容 |
 |---|---|
-| `GTR PNO ORG REC` | 吉他 / 钢琴 / 风琴 / 竖笛 |
-| `PAD PLK BEL` | 铺底 / 拨弦 / 钟声 |
-| `BRS BAS SYN` | 铜管 / 贝司 / 合成器 |
-| `RND` | 随机组合音源、数值和效果器 |
+| `GTR PNO` | 衰减弦谐波／增强第三分音的钢琴 |
+| `ORG REC` | 突出 1:2:3:6 的持续音／基频主导、偶次谐波较弱 |
+| `PAD PLK BEL` | 柔和持续／明亮短拨弦／带稀疏高分音的敲击音 |
+| `BRS BAS SYN` | 低次谐波厚实／基频突出的低音／带限锯齿谐波列 |
+| `RND` | 随机组合音色结构、数值和效果器 |
 | `M1`–`M5` | 工作存储；先保存离开的槽，再载入目标槽 |
+
+载入预设后再按 `SINE`、`SAW`、`SQUARE` 或 `TRIANGLE`，会取消乐器专用音色并回到普通基础波形。
 
 ## XY 触控板与键盘
 
@@ -117,6 +122,6 @@ LFO 可自动移动任意 AMP 或 FX 参数。17 个目标分别保存自己的 
 - `SEMITONE` 量化为半音；`CONTINUOUS` 允许连续音高。
 - Y 轴作为演奏位置传给音频端。
 - 底部键盘约两八度；白键为自然音，黑键为升/降半音。
-- 支持滑动演奏和最多八音和弦。
+- 支持滑动演奏和最多七音和弦。
 
-请查看 [HTML 手册](https://airpocket-soundman.github.io/Tab5_synth/zh/#simulator) 中的模拟器截图与可操作 LVGL 界面。
+请在 [HTML 手册](https://airpocket-soundman.github.io/Tab5_synth/zh/) 中查看截图；可操作界面请单独打开 [LVGL 模拟器](https://airpocket-soundman.github.io/Tab5_synth/simulator.html)。

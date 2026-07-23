@@ -388,6 +388,16 @@ void AudioEngine::setSourceType(AudioSourceType source_type) {
   }
 }
 
+void AudioEngine::setInstrumentTimbre(InstrumentTimbre timbre) {
+  ScopedLock lock(mutex_);
+  if (instrument_timbre_ == timbre) {
+    return;
+  }
+  instrument_timbre_ = timbre;
+  oscillator_source_.setInstrumentTimbre(timbre);
+  refreshOscillatorVoicesTimbre();
+}
+
 void AudioEngine::setAttackNormalized(float normalized) {
   ScopedLock lock(mutex_);
   const float next = normalizedToMilliseconds(normalized, SynthConfig::audio.amp_attack_max_ms) / 1000.0f;

@@ -2,7 +2,7 @@
 
 [図解 HTML 版（日本語）](https://airpocket-soundman.github.io/Tab5_synth/) · [English](manual.en.md) · [中文](manual.zh-CN.md)
 
-Tab5 Synth は、M5Stack Tab5 上で動作する最大 8 ボイスのタッチシンセサイザです。4 種類のオシレータ、マイクサンプル、外部 I2S 入力、ADSR、4 系統の FX、パラメータ別 LFO、プリセット、XY パッド、2 オクターブ鍵盤を備えます。
+Tab5 Synth は、M5Stack Tab5 上で動作する最大 7 ボイスのタッチシンセサイザです。4 種類のオシレータ、マイクサンプル、外部 I2S 入力、ADSR、4 系統の FX、パラメータ別 LFO、プリセット、XY パッド、2 オクターブ鍵盤を備えます。
 
 ## 基本操作
 
@@ -103,13 +103,18 @@ LFO は AMP/FX の各パラメータを自動的に揺らします。17 個の�
 
 ![BANK 画面](assets/screens/bank.png)
 
+`GTR`～`SYN` は、基本波形に ADSR と FX を付けるだけでなく、楽器別の専用倍音プロファイルを読み込みます。
+
 | ボタン | 内容 |
 |---|---|
-| `GTR PNO ORG REC` | Guitar / Piano / Organ / Recorder |
-| `PAD PLK BEL` | Pad / Pluck / Bell |
-| `BRS BAS SYN` | Brass / Bass / Synth |
-| `RND` | 音源、値、FX を組み合わせたランダム音色 |
+| `GTR PNO` | 減衰する弦の倍音／第3部分音を強めたピアノ |
+| `ORG REC` | 1:2:3:6 を強めた持続音／基音主体で偶数倍音が弱い笛 |
+| `PAD PLK BEL` | 柔らかい持続音／明るく短い撥弦／高次部分音を持つ打音 |
+| `BRS BAS SYN` | 低次倍音の厚いブラス／基音主体の低音／帯域制限した鋸歯状倍音 |
+| `RND` | 音色プロファイル、値、FX を組み合わせたランダム音色 |
 | `M1`–`M5` | 編集メモリ。移動前に現在スロットを保存してから移動先を読み込む |
+
+プリセット選択後に `SINE` / `SAW` / `SQUARE` / `TRIANGLE` を押すと、専用プロファイルを解除して通常の基本波形へ戻ります。
 
 ## XY パッドと鍵盤
 
@@ -117,6 +122,6 @@ LFO は AMP/FX の各パラメータを自動的に揺らします。17 個の�
 - `SEMITONE` は半音単位、`CONTINUOUS` は連続音程です。
 - Y 軸は演奏位置としてオーディオ側に渡されます。
 - 下部鍵盤は約 2 オクターブで、白鍵が自然音、黒鍵がシャープ/フラットです。
-- スワイプ演奏と最大 8 音の和音に対応します。
+- スワイプ演奏と最大 7 音の和音に対応します。
 
-画面図と操作可能なシミュレータは [HTML マニュアル](https://airpocket-soundman.github.io/Tab5_synth/#simulator) を参照してください。
+画面図は [HTML マニュアル](https://airpocket-soundman.github.io/Tab5_synth/) を、操作可能な画面は [LVGL シミュレータ](https://airpocket-soundman.github.io/Tab5_synth/simulator.html) を参照してください。

@@ -28,6 +28,7 @@ typedef struct {
     bool effect_enabled[LVGL_SYNTH_EFFECT_COUNT];
     uint8_t source;
     uint8_t mode;
+    uint8_t timbre;
 } lvgl_synth_state_t;
 
 typedef struct {

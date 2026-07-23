@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AudioSource.h"
+#include "InstrumentTimbre.h"
 #include "SynthConfig.h"
 
 #include <array>
@@ -15,6 +16,7 @@ class OscillatorSource : public AudioSource {
   void noteOffAll() override;
   void setVolume(float volume) override;
   void setVoiceLevel(std::size_t voice_index, float level, Waveform waveform) override;
+  void setInstrumentTimbre(InstrumentTimbre timbre);
   void setFilterEnabled(bool enabled);
   void setFilterParameters(float cutoff_normalized, float resonance_normalized, float mix_normalized);
   void setDistortionEnabled(bool enabled);
@@ -29,6 +31,7 @@ class OscillatorSource : public AudioSource {
   static constexpr std::size_t kSineWaveTableSize = 1024;
 
   void buildWaveTables();
+  void buildInstrumentWaveTable();
   void buildFilteredWaveTables();
   void ensureFilteredWaveTables();
   int channelForVoice(std::size_t voice_index) const;
@@ -36,6 +39,7 @@ class OscillatorSource : public AudioSource {
   static float waveformValue(Waveform waveform, float phase);
 
   float volume_ = SynthConfig::audio.default_volume;
+  InstrumentTimbre instrument_timbre_ = InstrumentTimbre::Basic;
   bool filter_enabled_ = true;
   float filter_cutoff_normalized_ = 1.00f;
   float filter_resonance_normalized_ = 0.25f;
@@ -56,8 +60,10 @@ class OscillatorSource : public AudioSource {
   std::array<std::uint8_t, kWaveTableSize> saw_wave_{};
   std::array<std::uint8_t, kWaveTableSize> square_wave_{};
   std::array<std::uint8_t, kWaveTableSize> triangle_wave_{};
+  std::array<std::uint8_t, kWaveTableSize> instrument_wave_{};
   std::array<std::uint8_t, kWaveTableSize> filtered_sine_wave_{};
   std::array<std::uint8_t, kWaveTableSize> filtered_saw_wave_{};
   std::array<std::uint8_t, kWaveTableSize> filtered_square_wave_{};
   std::array<std::uint8_t, kWaveTableSize> filtered_triangle_wave_{};
+  std::array<std::uint8_t, kWaveTableSize> filtered_instrument_wave_{};
 };

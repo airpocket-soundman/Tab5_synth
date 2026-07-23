@@ -18,10 +18,10 @@
     <div class="hero">
       <p class="eyebrow">M5Stack Tab5 · Performance Synthesizer</p>
       <h1>触摸、塑造、演奏。</h1>
-      <p class="lede">Tab5 Synth 把振荡器、麦克风采样、外部 I2S 输入、ADSR 包络、四组效果器、逐参数 LFO、预设、XY 触控板和触摸键盘整合为一台 8 复音合成器。</p>
+      <p class="lede">Tab5 Synth 把振荡器、麦克风采样、外部 I2S 输入、ADSR 包络、四组效果器、逐参数 LFO、预设、XY 触控板和触摸键盘整合为一台最多 7 复音的合成器。</p>
       <div class="hero-actions"><a class="button" href="#quickstart">制作第一个声音</a><a class="button secondary" href="../simulator.html" target="_blank" rel="noopener">在单独页面打开模拟器</a></div>
     </div>
-    <div class="facts"><div class="fact"><strong>8 voices</strong><span>最多同时演奏 8 个音符</span></div><div class="fact"><strong>6 sources</strong><span>SINE / SAW / SQUARE / TRIANGLE / MIC / I2S</span></div><div class="fact"><strong>17 targets</strong><span>每个 AMP 与 FX 参数都有独立 LFO</span></div></div>
+    <div class="facts"><div class="fact"><strong>7 voices</strong><span>最多同时演奏 7 个音符</span></div><div class="fact"><strong>6 sources</strong><span>SINE / SAW / SQUARE / TRIANGLE / MIC / I2S</span></div><div class="fact"><strong>17 targets</strong><span>每个 AMP 与 FX 参数都有独立 LFO</span></div></div>
 
     <section id="quickstart">
       <h2>快速入门</h2><p class="section-intro">基本流程是：选择目标 → 用底部横向推子调值 → 用键盘或 XY 触控板演奏。</p>
@@ -79,14 +79,15 @@
     </section>
 
     <section id="bank">
-      <h2>BANK · 预设与存储</h2><p class="section-intro">11 个预设提供音色起点；M1–M5 是工作存储槽，切换时保留完整编辑状态。</p>
+      <h2>BANK · 预设与存储</h2><p class="section-intro">共有 11 个预设。GTR–SYN 不只使用基础波形，还会载入各乐器专用的谐波结构和 ADSR；M1–M5 会连同该音色结构保存完整编辑状态。</p>
       <figure class="sim-figure"><div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status">LVGL 模拟器固定截图</span></div><img class="sim-shot" src="../assets/screens/bank.png" alt="Tab5 Synth BANK 页面"><figcaption class="callouts"><span class="callout"><b>1</b>GTR–SYN 固定预设</span><span class="callout"><b>2</b>RND 随机音色</span><span class="callout"><b>3</b>M1–M5 工作存储</span><span class="callout"><b>4</b>切换前自动保存当前槽</span></figcaption></figure>
-      <table><thead><tr><th>按钮</th><th>含义</th><th>音色方向</th></tr></thead><tbody><tr><td>GTR / PNO / ORG / REC</td><td>吉他 / 钢琴 / 风琴 / 竖笛</td><td>弦乐、键盘、风琴、长笛类起点</td></tr><tr><td>PAD / PLK / BEL</td><td>铺底 / 拨弦 / 钟声</td><td>持续、短促拨弦和钟声</td></tr><tr><td>BRS / BAS / SYN</td><td>铜管 / 贝司 / 合成器</td><td>铜管、低频和强劲电子音色</td></tr><tr><td>RND</td><td>随机</td><td>随机组合音源、数值和效果器</td></tr><tr><td>M1–M5</td><td>存储槽</td><td>先保存离开的槽，再载入目标槽</td></tr></tbody></table>
+      <table><thead><tr><th>按钮</th><th>含义</th><th>音色方向</th></tr></thead><tbody><tr><td>GTR / PNO</td><td>吉他 / 钢琴</td><td>逐渐衰减的弦谐波／增强第三分音的钢琴频谱</td></tr><tr><td>ORG / REC</td><td>风琴 / 竖笛</td><td>突出 1:2:3:6 的持续音／基频主导、偶次谐波较弱</td></tr><tr><td>PAD / PLK / BEL</td><td>铺底 / 拨弦 / 钟声</td><td>柔和持续／明亮短拨弦／带稀疏高分音的敲击音</td></tr><tr><td>BRS / BAS / SYN</td><td>铜管 / 贝司 / 合成器</td><td>低次谐波厚实／基频突出的低音／带限锯齿谐波列</td></tr><tr><td>RND</td><td>随机</td><td>随机组合音色结构、数值和效果器</td></tr><tr><td>M1–M5</td><td>存储槽</td><td>先保存离开的槽，再载入目标槽</td></tr></tbody></table>
+      <p class="note"><b>提示：</b>载入预设后再按 SINE、SAW、SQUARE 或 TRIANGLE，会取消乐器专用音色并回到普通基础波形。</p>
     </section>
 
     <section id="performance">
       <h2>演奏 · XY 触控板与键盘</h2><p class="section-intro">XY 触控板和两八度触摸键盘都能触发音符，并支持滑动演奏。</p>
-      <div class="parameter-grid"><article class="card"><h3>PERFORMANCE XY</h3><p><b>X 轴</b>覆盖 MIDI 48–96。<b>SEMITONE</b> 量化为半音；<b>CONTINUOUS</b> 允许连续音高。<b>Y 轴</b>作为演奏位置传给音频端，用于表现控制。</p></article><article class="card"><h3>TOUCH KEYBOARD</h3><p>直接演奏白键和黑键。滑动时释放前一个音并触发下一个音；最多 8 复音，可演奏和弦。</p></article></div>
+      <div class="parameter-grid"><article class="card"><h3>PERFORMANCE XY</h3><p><b>X 轴</b>覆盖 MIDI 48–96。<b>SEMITONE</b> 量化为半音；<b>CONTINUOUS</b> 允许连续音高。<b>Y 轴</b>作为演奏位置传给音频端，用于表现控制。</p></article><article class="card"><h3>TOUCH KEYBOARD</h3><p>直接演奏白键和黑键。滑动时释放前一个音并触发下一个音；最多 7 复音，可演奏和弦。</p></article></div>
       <div class="piano" role="img" aria-label="两八度钢琴键盘图"><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="white-key"></i><i class="black-key" style="left:8%"></i><i class="black-key" style="left:14.5%"></i><i class="black-key" style="left:27.5%"></i><i class="black-key" style="left:34%"></i><i class="black-key" style="left:40.5%"></i><i class="black-key" style="left:53.5%"></i><i class="black-key" style="left:60%"></i><i class="black-key" style="left:73%"></i><i class="black-key" style="left:79.5%"></i><i class="black-key" style="left:86%"></i></div>
       <div class="keyboard-notes"><div><b>白键</b><br>自然音 C D E F G A B</div><div><b>黑键</b><br>升/降半音</div><div><b>范围</b><br>约从 C3 开始的两八度</div></div>
     </section>

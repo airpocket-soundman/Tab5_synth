@@ -18,10 +18,10 @@
     <div class="hero">
       <p class="eyebrow">M5Stack Tab5 · Performance Synthesizer</p>
       <h1>Touch it. Shape it. Play it.</h1>
-      <p class="lede">Tab5 Synth combines oscillators, microphone sampling, external I2S input, an ADSR envelope, four effects, per-parameter LFOs, presets, an XY pad, and a touch keyboard in one 8-voice instrument.</p>
+      <p class="lede">Tab5 Synth combines oscillators, microphone sampling, external I2S input, an ADSR envelope, four effects, per-parameter LFOs, presets, an XY pad, and a touch keyboard in one 7-voice instrument.</p>
       <div class="hero-actions"><a class="button" href="#quickstart">Make your first sound</a><a class="button secondary" href="../simulator.html" target="_blank" rel="noopener">Open simulator on a separate page</a></div>
     </div>
-    <div class="facts"><div class="fact"><strong>8 voices</strong><span>Up to eight simultaneous notes</span></div><div class="fact"><strong>6 sources</strong><span>SINE / SAW / SQUARE / TRIANGLE / MIC / I2S</span></div><div class="fact"><strong>17 targets</strong><span>An independent LFO for every AMP and FX parameter</span></div></div>
+    <div class="facts"><div class="fact"><strong>7 voices</strong><span>Up to seven simultaneous notes</span></div><div class="fact"><strong>6 sources</strong><span>SINE / SAW / SQUARE / TRIANGLE / MIC / I2S</span></div><div class="fact"><strong>17 targets</strong><span>An independent LFO for every AMP and FX parameter</span></div></div>
 
     <section id="quickstart">
       <h2>Quick start</h2>
@@ -124,15 +124,16 @@
 
     <section id="bank">
       <h2>BANK · Presets and memories</h2>
-      <p class="section-intro">Eleven presets provide starting sounds. M1–M5 are working-memory slots that retain your complete editing state as you move between them.</p>
+      <p class="section-intro">Eleven presets provide starting sounds. GTR–SYN load a dedicated harmonic profile and ADSR shape instead of relying on a basic oscillator alone. M1–M5 retain that profile with the complete editing state.</p>
       <figure class="sim-figure">
         <div class="sim-toolbar"><strong>LVGL capture · BANK</strong><span class="capture-status">Static LVGL simulator capture</span></div>
         <img class="sim-shot" src="../assets/screens/bank.png" alt="Tab5 Synth BANK screen">
         <figcaption class="callouts"><span class="callout"><b>1</b>GTR–SYN fixed presets</span><span class="callout"><b>2</b>RND random patch</span><span class="callout"><b>3</b>M1–M5 work memories</span><span class="callout"><b>4</b>Current slot saves before switching</span></figcaption>
       </figure>
       <table><thead><tr><th>Buttons</th><th>Meaning</th><th>Character</th></tr></thead><tbody>
-        <tr><td>GTR / PNO / ORG / REC</td><td>Guitar / Piano / Organ / Recorder</td><td>Strings, keys, organ, and flute-like starts</td></tr><tr><td>PAD / PLK / BEL</td><td>Pad / Pluck / Bell</td><td>Sustained, short plucked, and bell sounds</td></tr><tr><td>BRS / BAS / SYN</td><td>Brass / Bass / Synth</td><td>Brass, low-end, and assertive synth sounds</td></tr><tr><td>RND</td><td>Random</td><td>An experimental combination of source, values, and effects</td></tr><tr><td>M1–M5</td><td>Memory slots</td><td>The slot you leave is saved before the destination is loaded</td></tr>
+        <tr><td>GTR / PNO</td><td>Guitar / Piano</td><td>A decaying string spectrum / a piano profile with a stronger third partial</td></tr><tr><td>ORG / REC</td><td>Organ / Recorder</td><td>Sustained 1:2:3:6 emphasis / fundamental-led tone with weak even harmonics</td></tr><tr><td>PAD / PLK / BEL</td><td>Pad / Pluck / Bell</td><td>Soft sustain / bright short pluck / struck tone with sparse high partials</td></tr><tr><td>BRS / BAS / SYN</td><td>Brass / Bass / Synth</td><td>Strong low harmonics / fundamental-heavy bass / band-limited saw series</td></tr><tr><td>RND</td><td>Random</td><td>An experimental combination of timbre, values, and effects</td></tr><tr><td>M1–M5</td><td>Memory slots</td><td>The slot you leave is saved before the destination is loaded</td></tr>
       </tbody></table>
+      <p class="note"><b>Tip:</b> pressing SINE, SAW, SQUARE, or TRIANGLE after loading a preset clears its instrument profile and returns to the normal basic waveform.</p>
     </section>
 
     <section id="performance">

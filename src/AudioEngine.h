@@ -4,6 +4,7 @@
 #include "AudioSourceType.h"
 #include "EnvelopeGenerator.h"
 #include "ExternalI2SSource.h"
+#include "InstrumentTimbre.h"
 #include "OnboardMicSource.h"
 #include "OscillatorSource.h"
 #include "SynthConfig.h"
@@ -23,6 +24,7 @@ class AudioEngine {
   void noteOnVoices(const float* note_values, std::size_t count, Waveform waveform);
   void noteOff();
   void setVolume(float volume);
+  void setInstrumentTimbre(InstrumentTimbre timbre);
   void setSourceType(AudioSourceType source_type);
   void setAttackNormalized(float normalized);
   void setDecayNormalized(float normalized);
@@ -137,6 +139,7 @@ class AudioEngine {
   std::array<EnvelopeGenerator, SynthConfig::audio.polyphony_voices> envelopes_{};
   EnvelopeSettings amp_envelope_{};
   Waveform active_waveform_ = Waveform::Sine;
+  InstrumentTimbre instrument_timbre_ = InstrumentTimbre::Basic;
   float volume_ = SynthConfig::audio.default_volume;
   AudioSourceType active_source_type_ = AudioSourceType::Oscillator;
   std::uint32_t last_envelope_update_ms_ = 0;
