@@ -4,9 +4,11 @@
 #include "SynthConfig.h"
 
 #include <Arduino.h>
+#include <M5Unified.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace {
 
@@ -71,7 +73,9 @@ void RetroSynthApp::begin() {
 
 void RetroSynthApp::update() {
   audio_engine_.update();
+  processSerialCommands();
   const std::uint32_t now = millis();
+  headphone_detector_.poll(now);
   if (rendering_suspended_ && !note_pressed_ && static_cast<std::int32_t>(now - render_resume_ms_) >= 0) {
     lvgl_synth_ui_invalidate_performance();
     lvgl_.setRenderingEnabled(true);
@@ -192,6 +196,56 @@ void RetroSynthApp::readUiState() {
   lvgl_synth_ui_get_state(&ui_state_);
 }
 
+// Debug serial API: newline-terminated commands ("udp" / "i2s" / "osc" /
+// "status") to drive source switching without the touch UI.
+void RetroSynthApp::processSerialCommands() {
+  while (Serial.available() > 0) {
+    const int c = Serial.read();
+    if (c == '\n' || c == '\r') {
+      if (serial_command_len_ > 0) {
+        serial_command_[serial_command_len_] = '\0';
+        serial_command_len_ = 0;
+        execSerialCommand(serial_command_);
+      }
+    } else if (serial_command_len_ + 1 < sizeof(serial_command_)) {
+      serial_command_[serial_command_len_++] = static_cast<char>(c);
+    }
+  }
+}
+
+void RetroSynthApp::execSerialCommand(const char* command) {
+  Serial.printf("[CMD] '%s'\n", command);
+  if (std::strcmp(command, "udp") == 0) {
+    Serial.println("[CMD] setSourceType(ExternalUdp) begin");
+    audio_engine_.setSourceType(AudioSourceType::ExternalUdp);
+    Serial.println("[CMD] setSourceType(ExternalUdp) end");
+  } else if (std::strcmp(command, "i2s") == 0) {
+    Serial.println("[CMD] setSourceType(ExternalI2S) begin");
+    audio_engine_.setSourceType(AudioSourceType::ExternalI2S);
+    Serial.println("[CMD] setSourceType(ExternalI2S) end");
+  } else if (std::strcmp(command, "osc") == 0) {
+    audio_engine_.setSourceType(AudioSourceType::Oscillator);
+    Serial.println("[CMD] source=osc");
+  } else if (std::strcmp(command, "status") == 0) {
+    Serial.printf("[STATUS] source=%d heap=%u psram=%u uptime_ms=%u hp_det=%d spk_en=%d\n",
+                  static_cast<int>(audio_engine_.activeSourceType()),
+                  static_cast<unsigned>(ESP.getFreeHeap()), static_cast<unsigned>(ESP.getFreePsram()),
+                  static_cast<unsigned>(millis()), M5.getIOExpander(0).digitalRead(7) ? 1 : 0,
+                  M5.getIOExpander(0).getWriteValue(1) ? 1 : 0);
+    audio_engine_.debugPrintStream();
+  } else if (std::strcmp(command, "esdump") == 0) {
+    static constexpr std::uint8_t kRegs[] = {0, 1, 2,  3,  4,  8,  23, 24, 25, 26, 27,
+                                             28, 29, 38, 39, 42, 43, 45, 46, 47, 48, 49};
+    for (const std::uint8_t reg : kRegs) {
+      std::uint8_t value = 0;
+      const bool ok = M5.In_I2C.readRegister(0x10, reg, &value, 1, 400000);
+      Serial.printf("[ES8388] reg%02u=0x%02X%s\n", reg, value, ok ? "" : " (read fail)");
+    }
+  } else {
+    Serial.println("[CMD] unknown (udp/i2s/osc/status/esdump)");
+  }
+}
+
 void RetroSynthApp::applyAudioState(bool include_lfo) {
   const std::uint32_t now = millis();
   const auto value = [this, include_lfo, now](int target) {
@@ -208,6 +262,8 @@ void RetroSynthApp::applyAudioState(bool include_lfo) {
     if (audio_engine_.hasMicSample()) {
       audio_engine_.setSourceType(AudioSourceType::OnboardMic);
     }
+  } else if (ui_state_.source == 6) {
+    audio_engine_.setSourceType(AudioSourceType::ExternalUdp);
   } else {
     audio_engine_.setSourceType(AudioSourceType::ExternalI2S);
   }

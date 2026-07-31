@@ -3,7 +3,7 @@
 #include "AudioSource.h"
 #include "AudioSourceType.h"
 #include "EnvelopeGenerator.h"
-#include "ExternalI2SSource.h"
+#include "ExternalStreamSource.h"
 #include "InstrumentTimbre.h"
 #include "OnboardMicSource.h"
 #include "OscillatorSource.h"
@@ -46,6 +46,7 @@ class AudioEngine {
   bool recordMicSample();
   bool hasMicSample() const;
   bool isMicRecording() const;
+  void debugPrintStream() const { external_stream_source_.debugPrint(); }
 
   [[nodiscard]] bool isNotePlaying() const;
   [[nodiscard]] bool isCurrentSourceAvailable() const;
@@ -145,7 +146,7 @@ class AudioEngine {
   std::uint32_t last_envelope_update_ms_ = 0;
   OscillatorSource oscillator_source_{};
   OnboardMicSource onboard_mic_source_{};
-  ExternalI2SSource external_i2s_source_{};
+  ExternalStreamSource external_stream_source_{};
   bool delay_enabled_ = true;
   float delay_time_normalized_ = 0.35f;
   float delay_feedback_normalized_ = 0.40f;

@@ -10,38 +10,43 @@
 
 ## Tab5_synth側（受信）固定ピン
 
-- `BCLK` : GPIO16
-- `WS/LRCK` : GPIO45
-- `DIN` : GPIO3
+M5-Bus左列の隣接3ピンを使用（GNDはpin 1/3/5）。
+
+- `BCLK` : GPIO47（M5-Bus pin 23）
+- `WS/LRCK` : GPIO2（M5-Bus pin 21）
+- `DIN` : GPIO3（M5-Bus pin 19）
 - `MCLK` : GPIO4（現状未使用）
+
+ピン選定理由: M5UnifiedがTab5内部で使用するピン（G31/G32=内部I2C、G39/G42/G43/G44=SD、G37/G38=UART0、G53/G54=PortA、G17/G52=PortB、G6/G7=PC UART）と競合しない自由GPIOのうち、物理的に隣接する3ピン。
 
 ## AtomS3側（送信）
 
-AtomS3(ESP32-S3)はGPIOマトリクスにより、周辺信号を任意GPIOに割り当て可能です。
-実際には、AtomS3側ファームでI2S TXのピンを指定し、そのピンを下表のTab5側ピンへ接続します。
+下部ヘッダの `G5/G6/G7` を使用します。
 
-### 配線対応表（例）
+**注意: G39/G38は内部IMU(MPU6886)のI2Cバスと共有されているため使用禁止**（M5.begin()がIMU検出でこのバスを叩くため、I2S信号と衝突しノイズの原因になる）。
 
-| 信号 | AtomS3側（例） | Tab5_synth側（固定） |
+### 配線対応表
+
+| 信号 | AtomS3側 | Tab5_synth側（固定） |
 |---|---|---|
-| BCLK | `GPIO5` (例: 追加で引き出したGPIO) | `GPIO16` |
-| WS/LRCK | `GPIO1` (PORT.CUSTOM White) | `GPIO45` |
-| DOUT(TX) | `GPIO2` (PORT.CUSTOM Yellow) | `GPIO3 (DIN)` |
-| GND | GND | GND |
+| BCLK | `GPIO5` | `GPIO47`（M5-Bus pin 23） |
+| WS/LRCK | `GPIO6` | `GPIO2`（M5-Bus pin 21） |
+| DOUT(TX) | `GPIO7` | `GPIO3 (DIN)`（M5-Bus pin 19） |
+| GND | GND | GND（M5-Bus pin 1/3/5） |
 
 ## 重要な注意
 
 - **PortA(HY2.0-4P)同士の直結だけでは不可**です。  
   HY2.0-4Pは `G1/G2` の2信号しか出ていないため、I2Sに必要な3信号（BCLK/WS/DATA）を満たせません。
-- 追加で1本、AtomS3の別GPIO（例: GPIO5）を配線してください。
 - 信号レベルは双方3.3V系です。必ず **GND共通** にします。
 - MCLKは現実装では不要です（使う場合は送受信の設定を揃えること）。
+- BCLKは16kHz×64bit=約1.02MHz。配線は短めにし、GNDを信号線と並走させると安定します。
 
 ## AtomS3側ソフト設定の目安
 
 - 役割: `I2S master TX`
-- データ形式: Tab5側と一致（例: 16-bit / mono / サンプルレート一致）
-- ピン設定: 上記で決めた `BCLK` `WS` `DOUT`
+- データ形式: Tab5側と一致（16kHz / 32bitスロットMSB / ステレオ両スロットに同一データ、上位16bitに16bit PCM）
+- ピン設定: 上記の `BCLK=G5` `WS=G6` `DOUT=G7`
 
 ## 参照
 

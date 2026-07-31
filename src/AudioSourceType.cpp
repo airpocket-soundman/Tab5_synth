@@ -8,6 +8,8 @@ const char* audioSourceLabel(AudioSourceType source_type) {
       return "MIC";
     case AudioSourceType::ExternalI2S:
       return "I2S";
+    case AudioSourceType::ExternalUdp:
+      return "UDP";
     default:
       return "OSC";
   }

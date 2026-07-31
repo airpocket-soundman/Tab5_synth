@@ -29,7 +29,7 @@ enum {
 };
 
 enum { PAGE_AMP, PAGE_FX, PAGE_LFO, PAGE_BANK, PAGE_COUNT };
-enum { SOURCE_SINE, SOURCE_SAW, SOURCE_SQUARE, SOURCE_TRIANGLE, SOURCE_MIC, SOURCE_I2S, SOURCE_COUNT };
+enum { SOURCE_SINE, SOURCE_SAW, SOURCE_SQUARE, SOURCE_TRIANGLE, SOURCE_MIC, SOURCE_I2S, SOURCE_UDP, SOURCE_COUNT };
 enum { FX_DELAY, FX_CHORUS, FX_DRIVE, FX_CRUSH, FX_COUNT };
 enum { EDIT_BASE, EDIT_LFO_RATE, EDIT_LFO_DEPTH, EDIT_LFO_WAVE };
 enum { AMP_ENV_COLS = 40, AMP_ENV_ROWS = 8 };
@@ -1001,7 +1001,9 @@ static void source_event(lv_event_t *event)
     active_preset = -1;
     mic_recording = false;
     if(source != SOURCE_MIC) mic_ready = false;
-    set_status(source == SOURCE_I2S ? "I2S input selected" : "Oscillator source selected");
+    set_status(source == SOURCE_I2S   ? "I2S input selected"
+               : source == SOURCE_UDP ? "UDP wireless input selected"
+                                      : "Oscillator source selected");
     refresh_ui();
     notify_state_changed();
 }
@@ -1531,7 +1533,9 @@ static void refresh_ui(void)
     }
     if(mic_recording) lv_label_set_text(source_readout, "RECORDING");
     else if(mic_ready && state.source == SOURCE_MIC) lv_label_set_text(source_readout, "SAMPLED / READY");
-    else lv_label_set_text(source_readout, state.source == SOURCE_I2S ? "DIGITAL INPUT" : "SOURCE ACTIVE");
+    else if(state.source == SOURCE_I2S) lv_label_set_text(source_readout, "DIGITAL INPUT");
+    else if(state.source == SOURCE_UDP) lv_label_set_text(source_readout, "WIRELESS INPUT");
+    else lv_label_set_text(source_readout, "SOURCE ACTIVE");
 
     for(i = 0; i < PAGE_COUNT; ++i) {
         bool selected = current_page == i;
@@ -1717,7 +1721,7 @@ static void create_theme_hitboxes(lv_obj_t *screen)
 
 static void create_sources(lv_obj_t *screen)
 {
-    static const char *const names[SOURCE_COUNT] = {"SINE", "SAW", "SQUARE", "TRIANGLE", "MIC", "I2S"};
+    static const char *const names[SOURCE_COUNT] = {"SINE", "SAW", "SQUARE", "TRIANGLE", "MIC", "I2S", "UDP"};
     lv_obj_t *panel = make_panel(screen, 14, 48, 1252, 74);
     int i;
     add_screws(panel, 1252, 74);
@@ -1726,7 +1730,7 @@ static void create_sources(lv_obj_t *screen)
         lv_obj_set_pos(title, 18, 26);
     }
     for(i = 0; i < SOURCE_COUNT; ++i) {
-        source_buttons[i] = make_button(panel, names[i], 155 + i * 135, 14, 124, 46,
+        source_buttons[i] = make_button(panel, names[i], 155 + i * 118, 14, 108, 46,
                                         i == SOURCE_MIC ? NULL : source_event, i);
         if(i == SOURCE_MIC) {
             lv_obj_add_event_cb(source_buttons[i].obj, mic_event, LV_EVENT_PRESSED, (void *)(intptr_t)i);
@@ -1735,8 +1739,8 @@ static void create_sources(lv_obj_t *screen)
         }
     }
     source_readout = make_label(panel, "SOURCE ACTIVE", &lv_font_montserrat_12, C_AMBER);
-    lv_obj_set_pos(source_readout, 985, 27);
-    lv_obj_set_width(source_readout, 235);
+    lv_obj_set_pos(source_readout, 1010, 27);
+    lv_obj_set_width(source_readout, 228);
     lv_obj_set_style_text_align(source_readout, LV_TEXT_ALIGN_CENTER, 0);
 }
 

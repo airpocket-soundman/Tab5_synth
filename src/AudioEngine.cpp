@@ -7,6 +7,11 @@
 
 namespace {
 constexpr float kPitchRetuneThresholdSemitone = 0.25f;
+
+bool isExternalStream(AudioSourceType type) {
+  return type == AudioSourceType::ExternalI2S || type == AudioSourceType::ExternalUdp;
+}
+
 constexpr std::uint32_t kMinRetuneIntervalMs = 24;
 constexpr float kDelayMinMs = 40.0f;
 constexpr float kDelayMaxMs = 700.0f;
@@ -38,7 +43,7 @@ void AudioEngine::begin() {
   applyEnvelopeSettings();
   oscillator_source_.begin();
   onboard_mic_source_.begin();
-  external_i2s_source_.begin();
+  external_stream_source_.begin();
   oscillator_source_.setVolume(volume_);
   oscillator_source_.setFilterEnabled(filter_enabled_);
   oscillator_source_.setFilterParameters(filter_cutoff_normalized_, filter_resonance_normalized_, filter_mix_normalized_);
@@ -49,7 +54,21 @@ void AudioEngine::begin() {
   oscillator_source_.setBitcrusherParameters(bitcrusher_bits_normalized_, bitcrusher_rate_normalized_,
                                              bitcrusher_mix_normalized_);
   onboard_mic_source_.setVolume(volume_);
-  external_i2s_source_.setVolume(volume_);
+  external_stream_source_.setVolume(volume_);
+  // Mirror current effect settings into the external I2S stream chain.
+  auto& stream_fx = external_stream_source_.effects();
+  stream_fx.setDelayEnabled(delay_enabled_);
+  stream_fx.setDelayParameters(delay_time_normalized_, delay_feedback_normalized_, delay_mix_normalized_);
+  stream_fx.setChorusEnabled(chorus_enabled_);
+  stream_fx.setChorusParameters(chorus_rate_normalized_, chorus_depth_normalized_, chorus_mix_normalized_);
+  stream_fx.setFilterEnabled(filter_enabled_);
+  stream_fx.setFilterParameters(filter_cutoff_normalized_, filter_resonance_normalized_, filter_mix_normalized_);
+  stream_fx.setDistortionEnabled(distortion_enabled_);
+  stream_fx.setDistortionParameters(distortion_drive_normalized_, distortion_tone_normalized_,
+                                    distortion_mix_normalized_);
+  stream_fx.setBitcrusherEnabled(bitcrusher_enabled_);
+  stream_fx.setBitcrusherParameters(bitcrusher_bits_normalized_, bitcrusher_rate_normalized_,
+                                    bitcrusher_mix_normalized_);
   last_envelope_update_ms_ = millis();
   xTaskCreatePinnedToCore(audioTaskEntry, "synth_audio", 6144, this, 10, &audio_task_, 0);
 }
@@ -97,11 +116,11 @@ void AudioEngine::processAudio() {
 void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Waveform waveform) {
   ScopedLock lock(mutex_);
   AudioSource& source = sourceFor(active_source_type_);
-  if (active_source_type_ == AudioSourceType::ExternalI2S) {
+  if (isExternalStream(active_source_type_)) {
     if (!source.isAvailable()) {
       return;
     }
-    // Always-on monitor mode for external I2S:
+    // Always-on monitor mode for external streams (I2S/UDP):
     // keep receiver active regardless of keyboard touches.
     source.noteOn(0, 0.0f, 0.0f, waveform);
     active_waveform_ = waveform;
@@ -143,7 +162,7 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
 
   const std::size_t clamped_count = requested_count;
 
-  if (active_source_type_ == AudioSourceType::ExternalI2S) {
+  if (isExternalStream(active_source_type_)) {
     const float frequency = noteValueToFrequency(requested_note_values[0]);
     if (!voice_active_[0]) {
       if (!source.noteOn(0, requested_note_values[0], frequency, waveform)) {
@@ -352,8 +371,8 @@ void AudioEngine::noteOnVoices(const float* note_values, std::size_t count, Wave
 
 void AudioEngine::noteOff() {
   ScopedLock lock(mutex_);
-  if (active_source_type_ == AudioSourceType::ExternalI2S) {
-    // Keep monitoring while External I2S source is selected.
+  if (isExternalStream(active_source_type_)) {
+    // Keep monitoring while an external stream source is selected.
     return;
   }
   for (std::size_t i = 0; i < SynthConfig::audio.polyphony_voices; ++i) {
@@ -369,13 +388,13 @@ void AudioEngine::setVolume(float volume) {
   volume_ = std::clamp(volume, 0.0f, 1.0f);
   oscillator_source_.setVolume(volume_);
   onboard_mic_source_.setVolume(volume_);
-  external_i2s_source_.setVolume(volume_);
+  external_stream_source_.setVolume(volume_);
 }
 
 void AudioEngine::setSourceType(AudioSourceType source_type) {
   ScopedLock lock(mutex_);
   if (active_source_type_ == source_type) {
-    if (source_type == AudioSourceType::ExternalI2S) {
+    if (isExternalStream(source_type)) {
       sourceFor(active_source_type_).noteOn(0, 0.0f, 0.0f, active_waveform_);
     }
     return;
@@ -383,7 +402,10 @@ void AudioEngine::setSourceType(AudioSourceType source_type) {
 
   stopAllImmediately();
   active_source_type_ = source_type;
-  if (active_source_type_ == AudioSourceType::ExternalI2S) {
+  if (isExternalStream(active_source_type_)) {
+    external_stream_source_.setTransportKind(active_source_type_ == AudioSourceType::ExternalUdp
+                                                 ? StreamTransportKind::Udp
+                                                 : StreamTransportKind::I2s);
     sourceFor(active_source_type_).noteOn(0, 0.0f, 0.0f, active_waveform_);
   }
 }
@@ -441,6 +463,7 @@ void AudioEngine::setReleaseNormalized(float normalized) {
 void AudioEngine::setDelayEnabled(bool enabled) {
   ScopedLock lock(mutex_);
   delay_enabled_ = enabled;
+  external_stream_source_.effects().setDelayEnabled(enabled);
 }
 
 void AudioEngine::setDelayParameters(float time_normalized, float feedback_normalized, float mix_normalized) {
@@ -448,6 +471,8 @@ void AudioEngine::setDelayParameters(float time_normalized, float feedback_norma
   delay_time_normalized_ = std::clamp(time_normalized, 0.0f, 1.0f);
   delay_feedback_normalized_ = std::clamp(feedback_normalized, 0.0f, 1.0f);
   delay_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+  external_stream_source_.effects().setDelayParameters(delay_time_normalized_, delay_feedback_normalized_,
+                                                    delay_mix_normalized_);
 }
 
 void AudioEngine::setChorusEnabled(bool enabled) {
@@ -456,6 +481,7 @@ void AudioEngine::setChorusEnabled(bool enabled) {
     return;
   }
   chorus_enabled_ = enabled;
+  external_stream_source_.effects().setChorusEnabled(enabled);
   if (chorus_enabled_) {
     return;
   }
@@ -485,6 +511,8 @@ void AudioEngine::setChorusParameters(float rate_normalized, float depth_normali
   chorus_rate_normalized_ = std::clamp(rate_normalized, 0.0f, 1.0f);
   chorus_depth_normalized_ = std::clamp(depth_normalized, 0.0f, 1.0f);
   chorus_mix_normalized_ = std::clamp(mix_normalized, 0.0f, 1.0f);
+  external_stream_source_.effects().setChorusParameters(chorus_rate_normalized_, chorus_depth_normalized_,
+                                                     chorus_mix_normalized_);
 }
 
 void AudioEngine::setFilterEnabled(bool enabled) {
@@ -494,6 +522,7 @@ void AudioEngine::setFilterEnabled(bool enabled) {
   }
   filter_enabled_ = enabled;
   oscillator_source_.setFilterEnabled(filter_enabled_);
+  external_stream_source_.effects().setFilterEnabled(filter_enabled_);
   refreshOscillatorVoicesTimbre();
 }
 
@@ -511,6 +540,8 @@ void AudioEngine::setFilterParameters(float cutoff_normalized, float resonance_n
   filter_resonance_normalized_ = next_resonance;
   filter_mix_normalized_ = next_mix;
   oscillator_source_.setFilterParameters(filter_cutoff_normalized_, filter_resonance_normalized_, filter_mix_normalized_);
+  external_stream_source_.effects().setFilterParameters(filter_cutoff_normalized_, filter_resonance_normalized_,
+                                                     filter_mix_normalized_);
   if (filter_enabled_ && filter_mix_normalized_ > 0.0f) {
     refreshOscillatorVoicesTimbre();
   }
@@ -523,6 +554,7 @@ void AudioEngine::setDistortionEnabled(bool enabled) {
   }
   distortion_enabled_ = enabled;
   oscillator_source_.setDistortionEnabled(distortion_enabled_);
+  external_stream_source_.effects().setDistortionEnabled(distortion_enabled_);
   refreshOscillatorVoicesTimbre();
 }
 
@@ -541,6 +573,8 @@ void AudioEngine::setDistortionParameters(float drive_normalized, float tone_nor
   distortion_mix_normalized_ = next_mix;
   oscillator_source_.setDistortionParameters(distortion_drive_normalized_, distortion_tone_normalized_,
                                              distortion_mix_normalized_);
+  external_stream_source_.effects().setDistortionParameters(distortion_drive_normalized_, distortion_tone_normalized_,
+                                                         distortion_mix_normalized_);
   if (distortion_enabled_ && distortion_mix_normalized_ > 0.0f) {
     refreshOscillatorVoicesTimbre();
   }
@@ -553,6 +587,7 @@ void AudioEngine::setBitcrusherEnabled(bool enabled) {
   }
   bitcrusher_enabled_ = enabled;
   oscillator_source_.setBitcrusherEnabled(bitcrusher_enabled_);
+  external_stream_source_.effects().setBitcrusherEnabled(bitcrusher_enabled_);
   refreshOscillatorVoicesTimbre();
 }
 
@@ -571,6 +606,8 @@ void AudioEngine::setBitcrusherParameters(float bits_normalized, float rate_norm
   bitcrusher_mix_normalized_ = next_mix;
   oscillator_source_.setBitcrusherParameters(bitcrusher_bits_normalized_, bitcrusher_rate_normalized_,
                                              bitcrusher_mix_normalized_);
+  external_stream_source_.effects().setBitcrusherParameters(bitcrusher_bits_normalized_, bitcrusher_rate_normalized_,
+                                                         bitcrusher_mix_normalized_);
   if (bitcrusher_enabled_ && bitcrusher_mix_normalized_ > 0.0f) {
     refreshOscillatorVoicesTimbre();
   }
@@ -756,7 +793,8 @@ AudioSource& AudioEngine::sourceFor(AudioSourceType source_type) {
     case AudioSourceType::OnboardMic:
       return onboard_mic_source_;
     case AudioSourceType::ExternalI2S:
-      return external_i2s_source_;
+    case AudioSourceType::ExternalUdp:
+      return external_stream_source_;
     default:
       return oscillator_source_;
   }
@@ -769,7 +807,8 @@ const AudioSource& AudioEngine::sourceFor(AudioSourceType source_type) const {
     case AudioSourceType::OnboardMic:
       return onboard_mic_source_;
     case AudioSourceType::ExternalI2S:
-      return external_i2s_source_;
+    case AudioSourceType::ExternalUdp:
+      return external_stream_source_;
     default:
       return oscillator_source_;
   }
@@ -779,6 +818,7 @@ void AudioEngine::applyEnvelopeSettings() {
   for (auto& envelope : envelopes_) {
     envelope.setSettings(amp_envelope_);
   }
+  external_stream_source_.setEnvelopeSettings(amp_envelope_);
 }
 
 void AudioEngine::applyVoiceLevel(std::size_t voice_index, float envelope_value, Waveform waveform) {

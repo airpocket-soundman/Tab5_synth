@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AudioEngine.h"
+#include "HeadphoneDetector.h"
 #include "LvglM5Driver.h"
 #include "lvgl_synth_ui.h"
 
@@ -20,6 +21,8 @@ class RetroSynthApp {
 
   void readUiState();
   void applyAudioState(bool include_lfo);
+  void processSerialCommands();
+  void execSerialCommand(const char* command);
   void updatePressedNotes();
   bool hasActiveLfo() const;
   float modulatedValue(int target, std::uint32_t now_ms) const;
@@ -27,6 +30,7 @@ class RetroSynthApp {
 
   LvglM5Driver lvgl_{};
   AudioEngine audio_engine_{};
+  HeadphoneDetector headphone_detector_{};
   lvgl_synth_state_t ui_state_{};
   bool mic_recording_ = false;
   bool note_pressed_ = false;
@@ -39,4 +43,6 @@ class RetroSynthApp {
   std::uint32_t render_resume_ms_ = 0;
   std::uint32_t mic_started_ms_ = 0;
   std::uint32_t last_lfo_update_ms_ = 0;
+  char serial_command_[32] = {};
+  std::size_t serial_command_len_ = 0;
 };

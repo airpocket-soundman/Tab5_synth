@@ -31,6 +31,10 @@ struct AudioConfig {
   std::int16_t mic_trim_threshold = 1200;
   std::size_t mic_record_block_samples = 256;
   int mic_sample_root_note = 60;
+  // ヘッドフォン検出（PI4IO HP_DET）のポーリング周期。挿入検出時はSPK_ENを落とす。
+  std::uint32_t hp_detect_poll_ms = 250;
+  // HP_DETの極性。true = High=挿入。実機で逆ならfalseにする。
+  bool hp_detect_active_high = true;
   std::uint32_t external_i2s_sample_rate = 16000;
   std::size_t external_i2s_buffer_frames = 256;
   std::size_t external_i2s_buffer_count = 3;
