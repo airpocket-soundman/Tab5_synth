@@ -37,7 +37,7 @@ class ExternalStreamSource : public AudioSource {
   AudioSourceType type() const override;
 
   StreamEffects& effects() { return effects_; }
-  void setEnvelopeSettings(const EnvelopeSettings& settings) { stream_envelope_.setSettings(settings); }
+  void setEnvelopeSettings(const EnvelopeSettings& settings);
   void setTransportKind(StreamTransportKind kind);
   StreamTransportKind transportKind() const { return transport_kind_; }
   bool isKindAvailable(StreamTransportKind kind) const;
@@ -53,12 +53,28 @@ class ExternalStreamSource : public AudioSource {
   static constexpr std::size_t kPlayChunkFrames = 512;  // 32ms
   static constexpr std::size_t kPlayBufferCount = 4;
 
+  // Per-voice state for the polyphonic UDP mixer.
+  static constexpr std::size_t kUdpMixVoices = 4;
+  static constexpr std::size_t kVoiceRingCapacity = 4096;  // 256ms per voice
+  static constexpr std::size_t kVoicePrefillFrames = 512;  // 32ms
+  struct UdpVoice {
+    std::array<std::int16_t, kVoiceRingCapacity> ring{};
+    std::size_t head = 0;
+    std::size_t count = 0;
+    bool primed = false;
+    bool last_gate = false;
+    EnvelopeGenerator envelope{};
+  };
+
   static void monitorTaskEntry(void* arg);
   bool startMonitor();
   void stopMonitor();
   void monitorTask();
+  void monitorLoopI2s();
+  void monitorLoopUdp();
   void ringPush(std::int16_t sample);
   void ringPopChunk(std::int16_t* dest, std::size_t count);
+  void voicePush(UdpVoice& voice, std::int16_t sample);
   StreamTransport& activeTransport();
 
   TaskHandle_t monitor_task_ = nullptr;
@@ -69,6 +85,8 @@ class ExternalStreamSource : public AudioSource {
   std::array<std::array<std::int16_t, kPlayChunkFrames>, kPlayBufferCount> play_buffers_{};
   std::size_t play_index_ = 0;
   bool primed_ = false;
+  std::array<UdpVoice, kUdpMixVoices> udp_voices_{};
+  EnvelopeSettings stream_envelope_settings_{};
   // Debug: peak |sample| seen since the last debugPrint (pre/post effects).
   mutable volatile std::int16_t rx_peak_ = 0;
   mutable volatile std::int16_t out_peak_ = 0;

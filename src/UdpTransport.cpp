@@ -66,11 +66,47 @@ void UdpTransport::stop() {
   // AP does not disturb audio.
 }
 
-std::size_t UdpTransport::read(std::int16_t* dest, std::size_t max_frames, std::uint32_t timeout_ms) {
+UdpTransport::Voice* UdpTransport::slotFor(std::uint8_t wire_id) {
+  const std::uint32_t now = millis();
+  Voice* oldest = nullptr;
+  for (auto& voice : voices_) {
+    if (voice.bound && voice.wire_id == wire_id) {
+      return &voice;
+    }
+  }
+  for (auto& voice : voices_) {
+    if (!voice.bound) {
+      voice.bound = true;
+      voice.wire_id = wire_id;
+      voice.head = 0;
+      voice.count = 0;
+      voice.gate = false;
+      voice.last_packet_ms = now;
+      return &voice;
+    }
+    if (oldest == nullptr || static_cast<std::int32_t>(voice.last_packet_ms - oldest->last_packet_ms) < 0) {
+      oldest = &voice;
+    }
+  }
+  // All slots busy: steal the stalest one.
+  if (oldest != nullptr && now - oldest->last_packet_ms > kVoiceIdleMs) {
+    oldest->wire_id = wire_id;
+    oldest->head = 0;
+    oldest->count = 0;
+    oldest->gate = false;
+    oldest->last_packet_ms = now;
+    return oldest;
+  }
+  return nullptr;
+}
+
+std::size_t UdpTransport::pump(std::uint32_t timeout_ms) {
   if (!listening_) {
+    vTaskDelay(pdMS_TO_TICKS(timeout_ms));
     return 0;
   }
   const std::uint32_t deadline = millis() + timeout_ms;
+  std::size_t packets = 0;
   for (;;) {
     const int packet_size = udp_.parsePacket();
     if (packet_size > static_cast<int>(kHeaderBytes)) {
@@ -80,25 +116,82 @@ std::size_t UdpTransport::read(std::int16_t* dest, std::size_t max_frames, std::
         std::uint32_t sequence = 0;
         std::memcpy(&sequence, packet_buffer_, sizeof(sequence));
         last_sequence_ = sequence;
-        gate_ = packet_buffer_[4] != 0;
-        const std::size_t frame_count =
-            std::min((static_cast<std::size_t>(got) - kHeaderBytes) / 2, max_frames);
-        std::memcpy(dest, packet_buffer_ + kHeaderBytes, frame_count * 2);
-        ++packets_received_;
-        frames_received_ += frame_count;
-        return frame_count;
+        Voice* voice = slotFor(packet_buffer_[5]);
+        if (voice != nullptr) {
+          voice->gate = packet_buffer_[4] != 0;
+          voice->last_packet_ms = millis();
+          const std::size_t frame_count = (static_cast<std::size_t>(got) - kHeaderBytes) / 2;
+          const std::int16_t* samples = reinterpret_cast<const std::int16_t*>(packet_buffer_ + kHeaderBytes);
+          for (std::size_t i = 0; i < frame_count; ++i) {
+            if (voice->count >= kVoiceFifoSize) {
+              voice->head = (voice->head + 1) % kVoiceFifoSize;  // drop oldest
+              --voice->count;
+            }
+            voice->fifo[(voice->head + voice->count) % kVoiceFifoSize] = samples[i];
+            ++voice->count;
+          }
+          ++packets_received_;
+          frames_received_ += frame_count;
+          ++packets;
+        }
       }
+      // Keep draining any queued packets without waiting.
+      if (static_cast<std::int32_t>(millis() - deadline) >= 0) {
+        return packets;
+      }
+      continue;
     }
-    if (static_cast<std::int32_t>(millis() - deadline) >= 0) {
-      ++empty_polls_;
-      return 0;
+    if (packets > 0 || static_cast<std::int32_t>(millis() - deadline) >= 0) {
+      if (packets == 0) {
+        ++empty_polls_;
+      }
+      return packets;
     }
     vTaskDelay(pdMS_TO_TICKS(1));
   }
 }
 
+bool UdpTransport::voiceInUse(std::size_t voice) const {
+  if (voice >= kMaxVoices) {
+    return false;
+  }
+  const Voice& v = voices_[voice];
+  if (!v.bound) {
+    return false;
+  }
+  return (millis() - v.last_packet_ms) < kVoiceReleaseMs || v.count > 0;
+}
+
+bool UdpTransport::voiceGate(std::size_t voice) const {
+  if (voice >= kMaxVoices) {
+    return false;
+  }
+  const Voice& v = voices_[voice];
+  return v.bound && v.gate && (millis() - v.last_packet_ms) < kVoiceIdleMs;
+}
+
+std::size_t UdpTransport::readVoice(std::size_t voice, std::int16_t* dest, std::size_t max_frames) {
+  if (voice >= kMaxVoices) {
+    return 0;
+  }
+  Voice& v = voices_[voice];
+  const std::size_t take = std::min(max_frames, v.count);
+  for (std::size_t i = 0; i < take; ++i) {
+    dest[i] = v.fifo[v.head];
+    v.head = (v.head + 1) % kVoiceFifoSize;
+  }
+  v.count -= take;
+  return take;
+}
+
+std::size_t UdpTransport::read(std::int16_t* dest, std::size_t max_frames, std::uint32_t timeout_ms) {
+  // Legacy single-stream read: pump then drain voice 0.
+  pump(timeout_ms);
+  return readVoice(0, dest, max_frames);
+}
+
 bool UdpTransport::gate() const {
-  return gate_;
+  return voiceGate(0);
 }
 
 bool UdpTransport::isAvailable() const {
@@ -111,6 +204,14 @@ void UdpTransport::debugPrint() const {
                 ap_started_ ? WiFi.softAPgetStationNum() : -1, static_cast<unsigned>(packets_received_),
                 static_cast<unsigned>(frames_received_), static_cast<unsigned>(empty_polls_),
                 static_cast<unsigned>(last_sequence_));
+  for (std::size_t i = 0; i < kMaxVoices; ++i) {
+    const Voice& v = voices_[i];
+    if (v.bound) {
+      Serial.printf("[UDPVOICE] slot=%u id=%u gate=%d fifo=%u age_ms=%u\n", static_cast<unsigned>(i),
+                    static_cast<unsigned>(v.wire_id), v.gate ? 1 : 0, static_cast<unsigned>(v.count),
+                    static_cast<unsigned>(millis() - v.last_packet_ms));
+    }
+  }
 }
 
 #else
@@ -122,5 +223,9 @@ std::size_t UdpTransport::read(std::int16_t*, std::size_t, std::uint32_t) { retu
 bool UdpTransport::gate() const { return false; }
 bool UdpTransport::isAvailable() const { return false; }
 void UdpTransport::debugPrint() const {}
+std::size_t UdpTransport::pump(std::uint32_t) { return 0; }
+bool UdpTransport::voiceInUse(std::size_t) const { return false; }
+bool UdpTransport::voiceGate(std::size_t) const { return false; }
+std::size_t UdpTransport::readVoice(std::size_t, std::int16_t*, std::size_t) { return 0; }
 
 #endif

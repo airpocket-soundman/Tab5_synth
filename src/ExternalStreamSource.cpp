@@ -121,7 +121,9 @@ bool ExternalStreamSource::startMonitor() {
   if (monitoring_) {
     return true;
   }
-  if (!activeTransport().start()) {
+  // I2S starts synchronously (fast). WiFi/UDP takes seconds to bring up, so
+  // it is started inside the monitor task to keep the UI responsive.
+  if (transport_kind_ == StreamTransportKind::I2s && !i2s_transport_.start()) {
     return false;
   }
 
@@ -129,7 +131,10 @@ bool ExternalStreamSource::startMonitor() {
   effects_.reset();
 
   monitoring_ = true;
-  BaseType_t result = xTaskCreate(monitorTaskEntry, "external_stream_monitor", 4096, this, 3, &monitor_task_);
+  if (monitor_task_ != nullptr) {
+    return true;  // previous task is still winding down; it will continue
+  }
+  BaseType_t result = xTaskCreate(monitorTaskEntry, "external_stream_monitor", 8192, this, 3, &monitor_task_);
   if (result != pdPASS) {
     monitoring_ = false;
     activeTransport().stop();
@@ -172,6 +177,16 @@ void ExternalStreamSource::ringPopChunk(std::int16_t* dest, std::size_t count) {
   ring_count_ -= count;
 }
 
+void ExternalStreamSource::setEnvelopeSettings(const EnvelopeSettings& settings) {
+  stream_envelope_settings_ = settings;
+  stream_envelope_.setSettings(settings);
+#if defined(ESP_PLATFORM)
+  for (auto& voice : udp_voices_) {
+    voice.envelope.setSettings(settings);
+  }
+#endif
+}
+
 void ExternalStreamSource::monitorTask() {
   ring_head_ = 0;
   ring_count_ = 0;
@@ -179,6 +194,33 @@ void ExternalStreamSource::monitorTask() {
   primed_ = false;
   last_gate_ = false;
   stream_envelope_.reset();
+  for (auto& voice : udp_voices_) {
+    voice.head = 0;
+    voice.count = 0;
+    voice.primed = false;
+    voice.last_gate = false;
+    voice.envelope.setSettings(stream_envelope_settings_);
+    voice.envelope.reset();
+  }
+
+  if (transport_kind_ == StreamTransportKind::Udp) {
+    // Deferred start: WiFi AP bring-up takes seconds and must not block the
+    // UI task that selected the source.
+    if (!udp_transport_.start()) {
+      Serial.println("[UDP] async start failed");
+      monitoring_ = false;
+    } else {
+      monitorLoopUdp();
+    }
+  } else {
+    monitorLoopI2s();
+  }
+
+  monitor_task_ = nullptr;
+  vTaskDelete(nullptr);
+}
+
+void ExternalStreamSource::monitorLoopI2s() {
   constexpr float kSampleDeltaSeconds = 1.0f / static_cast<float>(SynthConfig::audio.external_i2s_sample_rate);
   StreamTransport& transport = activeTransport();
 
@@ -205,9 +247,6 @@ void ExternalStreamSource::monitorTask() {
         auto& play_buffer = play_buffers_[play_index_];
         ringPopChunk(play_buffer.data(), kPlayChunkFrames);
 
-        // Amp envelope driven by the sender's key/gate state. The incoming
-        // tone is steady-state, so applying the gate at playback time (not
-        // capture time) has no audible skew.
         const bool gate = transport.gate();
         if (gate != last_gate_) {
           last_gate_ = gate;
@@ -235,14 +274,137 @@ void ExternalStreamSource::monitorTask() {
       }
       if (ring_count_ < kPlayChunkFrames &&
           M5.Speaker.isPlaying(SynthConfig::audio.audio_channel) == 0) {
-        // Underrun: sender clock is behind. Re-prime to rebuild headroom.
         primed_ = false;
       }
     }
   }
+}
 
-  monitor_task_ = nullptr;
-  vTaskDelete(nullptr);
+void ExternalStreamSource::voicePush(UdpVoice& voice, std::int16_t sample) {
+  if (voice.count >= kVoiceRingCapacity) {
+    voice.head = (voice.head + 1) % kVoiceRingCapacity;
+    --voice.count;
+  }
+  voice.ring[(voice.head + voice.count) % kVoiceRingCapacity] = sample;
+  ++voice.count;
+}
+
+// Polyphonic mixer: each UDP voice stream gets its own ring and ADSR
+// envelope; active voices are summed, then the shared effects chain runs on
+// the mix.
+void ExternalStreamSource::monitorLoopUdp() {
+  constexpr float kSampleDeltaSeconds = 1.0f / static_cast<float>(SynthConfig::audio.external_i2s_sample_rate);
+  // Static: 3KB of buffers would overflow the 4KB task stack (single
+  // monitor task, so no reentrancy concern).
+  static std::array<std::int32_t, kPlayChunkFrames> mix{};
+  static std::array<std::int16_t, kPlayChunkFrames> voice_chunk{};
+
+  while (monitoring_) {
+    // 1) Ingest pending packets (waits up to 20ms for the first one).
+    udp_transport_.pump(20);
+    for (std::size_t v = 0; v < kUdpMixVoices; ++v) {
+      UdpVoice& voice = udp_voices_[v];
+      for (;;) {
+        const std::size_t frames = udp_transport_.readVoice(v, read_buffer_.data(), read_buffer_.size());
+        if (frames == 0) {
+          break;
+        }
+        for (std::size_t i = 0; i < frames; ++i) {
+          const std::int16_t magnitude = read_buffer_[i] < 0 ? -read_buffer_[i] : read_buffer_[i];
+          if (magnitude > rx_peak_) {
+            rx_peak_ = magnitude;
+          }
+          voicePush(voice, read_buffer_[i]);
+        }
+      }
+      if (!voice.primed && voice.count >= kVoicePrefillFrames) {
+        voice.primed = true;
+      }
+    }
+
+    // 2) Mix + play while there is anything audible — including effect
+    //    tails (delay echoes) that ring on after all voices have ended.
+    static std::uint32_t last_audible_ms = 0;
+    while (M5.Speaker.isPlaying(SynthConfig::audio.audio_channel) < 2) {
+      bool any_data = false;
+      bool any_env = false;
+      for (std::size_t v = 0; v < kUdpMixVoices; ++v) {
+        if (udp_voices_[v].primed && udp_voices_[v].count >= kPlayChunkFrames) {
+          any_data = true;
+        }
+        if (udp_voices_[v].envelope.isActive()) {
+          any_env = true;
+        }
+      }
+      if (any_data || any_env) {
+        last_audible_ms = millis();
+      }
+      if (!any_data && !any_env && (millis() - last_audible_ms) > 400) {
+        break;  // effect tail has decayed to silence
+      }
+
+      mix.fill(0);
+      for (std::size_t v = 0; v < kUdpMixVoices; ++v) {
+        UdpVoice& voice = udp_voices_[v];
+        const bool gate = udp_transport_.voiceGate(v);
+        if (gate != voice.last_gate) {
+          voice.last_gate = gate;
+          if (gate) {
+            voice.envelope.noteOn();
+          } else {
+            voice.envelope.noteOff();
+          }
+        }
+        const bool has_chunk = voice.primed && voice.count >= kPlayChunkFrames;
+        if (!has_chunk && !voice.envelope.isActive()) {
+          if (voice.count == 0) {
+            voice.primed = false;
+          }
+          continue;
+        }
+        std::size_t take = 0;
+        if (has_chunk) {
+          take = kPlayChunkFrames;
+          for (std::size_t i = 0; i < take; ++i) {
+            voice_chunk[i] = voice.ring[voice.head];
+            voice.head = (voice.head + 1) % kVoiceRingCapacity;
+          }
+          voice.count -= take;
+        }
+        for (std::size_t i = 0; i < kPlayChunkFrames; ++i) {
+          const float env = voice.envelope.process(kSampleDeltaSeconds);
+          const float sample = (i < take) ? static_cast<float>(voice_chunk[i]) : 0.0f;
+          mix[i] += static_cast<std::int32_t>(sample * env);
+        }
+      }
+
+      auto& play_buffer = play_buffers_[play_index_];
+      for (std::size_t i = 0; i < kPlayChunkFrames; ++i) {
+        play_buffer[i] = static_cast<std::int16_t>(std::max<std::int32_t>(-32768, std::min<std::int32_t>(32767, mix[i])));
+      }
+      effects_.process(play_buffer.data(), kPlayChunkFrames);
+      std::int16_t chunk_peak = 0;
+      for (std::size_t i = 0; i < kPlayChunkFrames; ++i) {
+        const std::int16_t magnitude = play_buffer[i] < 0 ? -play_buffer[i] : play_buffer[i];
+        if (magnitude > chunk_peak) {
+          chunk_peak = magnitude;
+        }
+        if (magnitude > out_peak_) {
+          out_peak_ = magnitude;
+        }
+      }
+      if (chunk_peak > 40) {
+        last_audible_ms = millis();  // delay tail still audible: keep rendering
+      }
+      M5.Speaker.playRaw(play_buffer.data(), kPlayChunkFrames, SynthConfig::audio.external_i2s_sample_rate, false, 1,
+                         SynthConfig::audio.audio_channel, false);
+      play_index_ = (play_index_ + 1) % kPlayBufferCount;
+    }
+
+    // Always yield: with several voices streaming, packets are pending almost
+    // continuously and pump() alone would never block, starving the UI task.
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
 }
 
 #endif

@@ -1417,9 +1417,11 @@ static void keyboard_swipe_event(lv_event_t *event)
 
 static void default_patch(synth_state_t *patch)
 {
+    /* Ripple-synth tuned defaults (2026-08 PC simulation session):
+       Attack=0(~5ms), Release=2(~60ms), Delay time 250ms / fb 0.55 / mix 0.35 */
     static const uint8_t defaults[TARGET_COUNT] = {
-        45, 0, 6, 72, 12,
-        35, 40, 30,
+        45, 0, 6, 72, 2,
+        32, 37, 35,
         30, 40, 30,
         40, 55, 0,
         100, 100, 0
@@ -1430,7 +1432,7 @@ static void default_patch(synth_state_t *patch)
     patch->source = SOURCE_SINE;
     patch->mode = 1;
     patch->timbre = 0;
-    patch->effect_on[FX_DELAY] = false;
+    patch->effect_on[FX_DELAY] = true;
     patch->effect_on[FX_CHORUS] = false;
     for(i = 0; i < TARGET_COUNT; ++i) {
         patch->lfo[i].rate = 35;
