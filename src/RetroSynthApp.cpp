@@ -233,6 +233,16 @@ void RetroSynthApp::execSerialCommand(const char* command) {
                   static_cast<unsigned>(millis()), M5.getIOExpander(0).digitalRead(7) ? 1 : 0,
                   M5.getIOExpander(0).getWriteValue(1) ? 1 : 0);
     audio_engine_.debugPrintStream();
+    Serial.printf("[DELAY] on=%d t=%.2f fb=%.2f mix=%.2f\n", audio_engine_.delayEnabled() ? 1 : 0,
+                  static_cast<double>(audio_engine_.delayTimeNormalized()),
+                  static_cast<double>(audio_engine_.delayFeedbackNormalized()),
+                  static_cast<double>(audio_engine_.delayMixNormalized()));
+  } else if (std::strcmp(command, "fbk") == 0) {
+    // Diagnostic: force delay feedback to max without touching the UI.
+    audio_engine_.setDelayEnabled(true);
+    audio_engine_.setDelayParameters(audio_engine_.delayTimeNormalized(), 1.0f,
+                                     std::max(0.35f, audio_engine_.delayMixNormalized()));
+    Serial.println("[CMD] delay fbk=1.0");
   } else if (std::strcmp(command, "esdump") == 0) {
     static constexpr std::uint8_t kRegs[] = {0, 1, 2,  3,  4,  8,  23, 24, 25, 26, 27,
                                              28, 29, 38, 39, 42, 43, 45, 46, 47, 48, 49};

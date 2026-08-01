@@ -146,6 +146,9 @@ bool ExternalStreamSource::startMonitor() {
 }
 
 void ExternalStreamSource::stopMonitor() {
+  if (monitoring_) {
+    Serial.printf("[STREAM] stopMonitor at uptime=%u\n", static_cast<unsigned>(millis()));
+  }
   monitoring_ = false;
   for (int i = 0; i < 50 && monitor_task_ != nullptr; ++i) {
     vTaskDelay(pdMS_TO_TICKS(2));
@@ -325,6 +328,7 @@ void ExternalStreamSource::monitorLoopUdp() {
     // 2) Mix + play while there is anything audible — including effect
     //    tails (delay echoes) that ring on after all voices have ended.
     static std::uint32_t last_audible_ms = 0;
+    static bool rendered_since_cut = false;
     while (M5.Speaker.isPlaying(SynthConfig::audio.audio_channel) < 2) {
       bool any_data = false;
       bool any_env = false;
@@ -339,7 +343,14 @@ void ExternalStreamSource::monitorLoopUdp() {
       if (any_data || any_env) {
         last_audible_ms = millis();
       }
-      if (!any_data && !any_env && (millis() - last_audible_ms) > 400) {
+      // Long grace: with slow delay times the tail is discrete echoes with
+      // quiet gaps between them; a short window mistakes a gap for the end
+      // and cuts the tail mid-decay.
+      if (!any_data && !any_env && (millis() - last_audible_ms) > 2500) {
+        if (rendered_since_cut) {
+          rendered_since_cut = false;
+          Serial.printf("[TAILCUT] silent>2500ms, uptime=%u\n", static_cast<unsigned>(millis()));
+        }
         break;  // effect tail has decayed to silence
       }
 
@@ -379,8 +390,10 @@ void ExternalStreamSource::monitorLoopUdp() {
       }
 
       auto& play_buffer = play_buffers_[play_index_];
+      // 2x makeup gain: the ADSR envelope and delay dry/wet mix eat several
+      // dB, leaving UDP grains noticeably quieter than keyboard notes.
       for (std::size_t i = 0; i < kPlayChunkFrames; ++i) {
-        play_buffer[i] = static_cast<std::int16_t>(std::max<std::int32_t>(-32768, std::min<std::int32_t>(32767, mix[i])));
+        play_buffer[i] = static_cast<std::int16_t>(std::max<std::int32_t>(-32768, std::min<std::int32_t>(32767, mix[i] * 2)));
       }
       effects_.process(play_buffer.data(), kPlayChunkFrames);
       std::int16_t chunk_peak = 0;
@@ -393,12 +406,13 @@ void ExternalStreamSource::monitorLoopUdp() {
           out_peak_ = magnitude;
         }
       }
-      if (chunk_peak > 40) {
+      if (chunk_peak > 20) {
         last_audible_ms = millis();  // delay tail still audible: keep rendering
       }
       M5.Speaker.playRaw(play_buffer.data(), kPlayChunkFrames, SynthConfig::audio.external_i2s_sample_rate, false, 1,
                          SynthConfig::audio.audio_channel, false);
       play_index_ = (play_index_ + 1) % kPlayBufferCount;
+      rendered_since_cut = true;
     }
 
     // Always yield: with several voices streaming, packets are pending almost

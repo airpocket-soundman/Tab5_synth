@@ -135,6 +135,10 @@ static int current_memory;
 static int active_preset = -1;
 static int current_page = PAGE_AMP;
 static int current_target = T_VOL;
+/* Last focused parameter per editor page, so switching pages rebinds the
+ * common slider to that page's own focus (AMP and FX remember separately). */
+static int last_amp_target = T_VOL;
+static int last_fx_target = T_DELAY_TIME;
 static int current_fx = FX_DELAY;
 static int edit_mode = EDIT_BASE;
 static bool mic_recording;
@@ -1034,6 +1038,8 @@ static void page_event(lv_event_t *event)
 {
     current_page = (int)(intptr_t)lv_event_get_user_data(event);
     if(current_page != PAGE_LFO) edit_mode = EDIT_BASE;
+    if(current_page == PAGE_AMP && current_target > T_REL) current_target = last_amp_target;
+    else if(current_page == PAGE_FX && current_target < T_DELAY_TIME) current_target = last_fx_target;
     animate_control_updates = true;
     set_status(current_page == PAGE_LFO ? "LFO editor follows the current parameter" : "Control page selected");
     refresh_ui();
@@ -1050,11 +1056,13 @@ static void rotary_event(lv_event_t *event)
     if(knob->role == ROTARY_AMP) {
         selection_changed = current_target != knob->index || edit_mode != EDIT_BASE;
         current_target = knob->index;
+        last_amp_target = current_target;
         edit_mode = EDIT_BASE;
     } else if(knob->role == ROTARY_FX) {
         int target = fx_target_base[current_fx] + knob->index;
         selection_changed = current_target != target || edit_mode != EDIT_BASE;
         current_target = target;
+        last_fx_target = current_target;
         edit_mode = EDIT_BASE;
     } else {
         int mode = EDIT_LFO_RATE + knob->index;
@@ -1081,6 +1089,7 @@ static void effect_event(lv_event_t *event)
     current_fx = effect;
     state.effect_on[effect] = !state.effect_on[effect];
     current_target = fx_target_base[effect];
+    last_fx_target = current_target;
     edit_mode = EDIT_BASE;
     animate_control_updates = true;
     set_status(state.effect_on[effect] ? "Effect enabled; parameters ready" : "Effect bypassed; parameters remain editable");

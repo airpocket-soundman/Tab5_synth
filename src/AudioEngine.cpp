@@ -16,7 +16,10 @@ constexpr std::uint32_t kMinRetuneIntervalMs = 24;
 constexpr float kDelayMinMs = 40.0f;
 constexpr float kDelayMaxMs = 700.0f;
 constexpr std::uint32_t kEchoGateMinMs = 18;
-constexpr float kMinDelayGain = 0.015f;
+// Echo chain cutoff: keep re-triggering until the echo gain rounds below
+// one step of the 8-bit channel volume (1/255 ~= 0.004) — quieter echoes
+// physically cannot be reproduced.
+constexpr float kMinDelayGain = 0.004f;
 constexpr float kTwoPi = 6.28318530718f;
 constexpr std::uint32_t kChorusRetuneMinMs = 8;
 constexpr float kChorusRetuneThresholdSemitone = 0.004f;
@@ -866,7 +869,10 @@ void AudioEngine::enqueueDelayEvent(float note_value, float frequency, Waveform 
   }
   const float delay_ms_f = kDelayMinMs + (kDelayMaxMs - kDelayMinMs) * delay_time_normalized_;
   const auto delay_ms = static_cast<std::uint32_t>(std::lround(delay_ms_f));
-  const std::uint8_t repeats = static_cast<std::uint8_t>(1 + static_cast<int>(std::lround(delay_feedback_normalized_ * 15.0f)));
+  // Generous repeat budget: the chain normally dies via the kMinDelayGain
+  // cutoff as the per-echo gain decays; this cap only bounds the fb=max case
+  // (a fixed 16 used to hard-stop FBK=100 tails at ~4s mid-volume).
+  const std::uint8_t repeats = static_cast<std::uint8_t>(1 + static_cast<int>(std::lround(delay_feedback_normalized_ * 250.0f)));
   const float gain = std::clamp(delay_mix_normalized_ * 0.85f, 0.0f, 1.0f);
   if (gain < kMinDelayGain || repeats == 0) {
     return;
@@ -962,7 +968,10 @@ void AudioEngine::triggerDelayEvent(const PendingDelayEvent& event, std::uint32_
   scheduleVoiceOff(voice_index, now_ms + gate_ms);
 
   if (event.repeats_left > 1) {
-    const float next_gain = std::clamp(event.gain * delay_feedback_normalized_, 0.0f, 1.0f);
+    // Cap the per-echo gain below 1.0 so even FBK=100 decays (~0.35dB/echo,
+    // matching the stream chain's feedback ceiling) instead of repeating at
+    // constant volume until the repeat budget runs out.
+    const float next_gain = std::clamp(event.gain * std::min(delay_feedback_normalized_, 0.96f), 0.0f, 1.0f);
     if (next_gain >= kMinDelayGain) {
       PendingDelayEvent chained = event;
       chained.fire_ms = now_ms + delay_ms;

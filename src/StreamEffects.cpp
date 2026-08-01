@@ -96,8 +96,10 @@ void StreamEffects::process(std::int16_t* samples, std::size_t count) {
   const bool delay_on = delay_enabled_ && delay_mix_normalized_ > 0.0f;
   const float delay_mix = delay_mix_normalized_;
   // Square-root curve so mid knob positions give keyboard-like repeat counts
-  // (linear mapping died after 2-3 echoes at typical settings).
-  const float delay_feedback = std::sqrt(delay_feedback_normalized_) * 0.9f;
+  // (linear mapping died after 2-3 echoes at typical settings). Cap 0.96:
+  // at max FBK each echo loses only ~0.35dB, so the tail rings 15-20s
+  // before the stream's silence watchdog retires it; 1.0 would never decay.
+  const float delay_feedback = std::sqrt(delay_feedback_normalized_) * 0.96f;
   const float delay_ms = kDelayMinMs + (kDelayMaxMs - kDelayMinMs) * delay_time_normalized_;
   const std::size_t delay_samples =
       std::clamp<std::size_t>(static_cast<std::size_t>(delay_ms * 0.001f * sample_rate_), 1, kMaxDelaySamples - 1);
